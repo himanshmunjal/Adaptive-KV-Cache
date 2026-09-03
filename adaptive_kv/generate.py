@@ -27,12 +27,18 @@ def generate_with_adaptive_cache(
     do_sample: bool = False,
     temperature: float = 1.0,
     return_stats: bool = False,
+    max_length: int | None = None,
 ):
     cache_config = cache_config or AdaptiveKVConfig()
     needs_attn = cache_config.importance_mode != "key_diversity"
     device = next(model.parameters()).device
 
-    inputs = tokenizer(prompt, return_tensors="pt").to(device)
+    inputs = tokenizer(prompt, return_tensors="pt")
+    if max_length is not None and inputs["input_ids"].shape[1] > max_length:
+        inputs["input_ids"] = inputs["input_ids"][:, :max_length]
+        if "attention_mask" in inputs:
+            inputs["attention_mask"] = inputs["attention_mask"][:, :max_length]
+    inputs = inputs.to(device)
     input_ids = inputs["input_ids"]
 
     cache = AdaptiveKVCache(model.config.num_hidden_layers, cache_config)
@@ -43,6 +49,11 @@ def generate_with_adaptive_cache(
         past_key_values=cache,
         use_cache=True,
         output_attentions=needs_attn,
+        logits_to_keep=1,  # only project the last position through lm_head during
+                            # prefill -- without this, HF computes logits for every
+                            # prompt position at once (O(seq_len * vocab_size)),
+                            # which is the dominant memory cost on long contexts and
+                            # was causing CUDA OOMs on long LongBench documents.
     )
     if needs_attn:
         for i, attn in enumerate(out.attentions):

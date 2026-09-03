@@ -158,6 +158,7 @@ def main():
         _, stats = generate_with_adaptive_cache(
             model, tok, prompt, max_new_tokens=args.max_new_tokens,
             cache_config=cfg, return_stats=True,
+            max_length=7500,
         )
         adapt_out = stats["generated_text"]
 
