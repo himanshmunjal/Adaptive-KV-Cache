@@ -1,0 +1,42 @@
+{
+  "run_name": "microsoft_Phi-3-mini-4k-instruct_memthroughput_20260903T205730Z",
+  "timestamp_utc": "20260903T205730Z",
+  "args": {
+    "model": "microsoft/Phi-3-mini-4k-instruct",
+    "prompt_lengths": [
+      512,
+      2048,
+      8192
+    ],
+    "max_new_tokens": 128,
+    "importance_mode": "key_diversity",
+    "output_dir": "results",
+    "run_name": null
+  },
+  "results": [
+    {
+      "prompt_length": 512,
+      "baseline_cache_mb": 251.65824,
+      "adaptive_cache_mb": 155.086848,
+      "memory_reduction_pct": 38.37402343750001,
+      "baseline_tokens_per_second": 28.246479110068886,
+      "adaptive_tokens_per_second": 12.430723673940657
+    },
+    {
+      "prompt_length": 2048,
+      "baseline_cache_mb": 855.638016,
+      "adaptive_cache_mb": 512.598016,
+      "memory_reduction_pct": 40.09172028186274,
+      "baseline_tokens_per_second": 22.930855662252277,
+      "adaptive_tokens_per_second": 10.431549652619095
+    },
+    {
+      "prompt_length": 8192,
+      "baseline_cache_mb": 1938.161664,
+      "adaptive_cache_mb": 1152.88064,
+      "memory_reduction_pct": 40.51679684858321,
+      "baseline_tokens_per_second": 16.134801495485632,
+      "adaptive_tokens_per_second": 4.846486636096101
+    }
+  ]
+}
