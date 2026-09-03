@@ -1,0 +1,860 @@
+<title>Adaptive KV Cache</title>
+<meta name="description" content="How the mixed-precision, self-reallocating KV cache is implemented: data structures, quantization, importance scoring, and the transformers.Cache integration.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+
+<style>
+  :root{
+    --bg:#F4F5F7;
+    --surface:#FFFFFF;
+    --surface-2:#EDEFF3;
+    --ink:#1B1F27;
+    --ink-dim:#5B6472;
+    --ink-faint:#8991A0;
+    --border:#DCE0E6;
+    --accent:#3454D1;
+    --accent-ink:#FFFFFF;
+    --code-bg:#161A22;
+    --code-ink:#E7E9EE;
+
+    --fp16:#3454D1;
+    --fp16-soft:#E9EDFB;
+    --int8:#0E8C7F;
+    --int8-soft:#E3F5F1;
+    --int4:#C2740A;
+    --int4-soft:#FBEEDD;
+
+    --shadow: 0 1px 2px rgba(20,24,34,.04), 0 8px 24px -12px rgba(20,24,34,.12);
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: "Public Sans", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#10131A;
+      --surface:#171B24;
+      --surface-2:#1E232E;
+      --ink:#E7E9EE;
+      --ink-dim:#9AA3B2;
+      --ink-faint:#6B7382;
+      --border:#2A2F3A;
+      --accent:#7C97FF;
+      --accent-ink:#0E1220;
+      --code-bg:#0D1016;
+      --code-ink:#DEE3EC;
+
+      --fp16:#7C97FF;
+      --fp16-soft:#1D2540;
+      --int8:#3FD6C4;
+      --int8-soft:#123330;
+      --int4:#F2A93B;
+      --int4-soft:#3A2A11;
+
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 28px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#10131A;
+    --surface:#171B24;
+    --surface-2:#1E232E;
+    --ink:#E7E9EE;
+    --ink-dim:#9AA3B2;
+    --ink-faint:#6B7382;
+    --border:#2A2F3A;
+    --accent:#7C97FF;
+    --accent-ink:#0E1220;
+    --code-bg:#0D1016;
+    --code-ink:#DEE3EC;
+
+    --fp16:#7C97FF;
+    --fp16-soft:#1D2540;
+    --int8:#3FD6C4;
+    --int8-soft:#123330;
+    --int4:#F2A93B;
+    --int4-soft:#3A2A11;
+
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 28px -14px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:var(--fp16-soft); }
+
+  a{ color:var(--accent); text-decoration-thickness:1px; text-underline-offset:2px; }
+  a:focus-visible, button:focus-visible, summary:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px; border-radius:2px;
+  }
+
+  h1,h2,h3,h4{ font-family:var(--serif); font-weight:600; text-wrap:balance; color:var(--ink); }
+
+  code, .mono{ font-family:var(--mono); }
+
+  /* ---------- shell ---------- */
+  .shell{
+    max-width:1180px;
+    margin:0 auto;
+    padding:0 clamp(20px,4vw,48px) 96px;
+    display:grid;
+    grid-template-columns:236px minmax(0,1fr);
+    gap:56px;
+  }
+  @media (max-width:900px){
+    .shell{ grid-template-columns:1fr; }
+  }
+
+  /* ---------- hero ---------- */
+  .hero{
+    padding:56px 0 40px;
+    border-bottom:1px solid var(--border);
+    margin-bottom:8px;
+  }
+  .hero .eyebrow{
+    font-family:var(--mono);
+    font-size:12.5px;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .hero .eyebrow .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent); }
+  .hero h1{
+    font-size:clamp(32px,4.4vw,46px);
+    line-height:1.08;
+    letter-spacing:-.01em;
+    max-width:16ch;
+    margin:0 0 16px;
+  }
+  .hero p.lede{
+    font-size:18px;
+    color:var(--ink-dim);
+    max-width:62ch;
+    margin:0 0 26px;
+  }
+  .tier-legend{
+    display:flex; flex-wrap:wrap; gap:10px;
+  }
+  .chip{
+    font-family:var(--mono);
+    font-size:12.5px;
+    font-weight:600;
+    padding:5px 10px 5px 8px;
+    border-radius:5px;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    border:1px solid transparent;
+  }
+  .chip .sw{ width:8px; height:8px; border-radius:2px; }
+  .chip.fp16{ background:var(--fp16-soft); color:var(--fp16); }
+  .chip.fp16 .sw{ background:var(--fp16); }
+  .chip.int8{ background:var(--int8-soft); color:var(--int8); }
+  .chip.int8 .sw{ background:var(--int8); }
+  .chip.int4{ background:var(--int4-soft); color:var(--int4); }
+  .chip.int4 .sw{ background:var(--int4); }
+
+  /* ---------- toc ---------- */
+  nav.toc{
+    position:sticky;
+    top:32px;
+    align-self:start;
+    padding-top:56px;
+    font-size:13.5px;
+  }
+  nav.toc .toc-title{
+    font-family:var(--mono);
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--ink-faint);
+    font-size:11.5px;
+    margin-bottom:14px;
+  }
+  nav.toc ol{ list-style:none; margin:0; padding:0; counter-reset:toc; }
+  nav.toc li{ counter-increment:toc; margin-bottom:2px; }
+  nav.toc a{
+    display:flex; gap:9px;
+    color:var(--ink-dim);
+    text-decoration:none;
+    padding:6px 8px;
+    border-radius:6px;
+  }
+  nav.toc a:hover{ background:var(--surface-2); color:var(--ink); }
+  nav.toc a::before{
+    content:counter(toc,decimal-leading-zero);
+    font-family:var(--mono);
+    color:var(--ink-faint);
+    font-size:11.5px;
+    padding-top:1px;
+  }
+  @media (max-width:900px){ nav.toc{ display:none; } }
+
+  /* ---------- main content ---------- */
+  main{ min-width:0; padding-top:40px; }
+  section{ padding:44px 0; border-bottom:1px solid var(--border); }
+  section:last-of-type{ border-bottom:none; }
+
+  .kicker{
+    display:flex; align-items:baseline; gap:12px; margin-bottom:6px;
+  }
+  .kicker .num{
+    font-family:var(--mono); color:var(--accent); font-size:14px; font-weight:600;
+  }
+  h2{ font-size:26px; margin:0 0 18px; }
+  h2 .num{ display:none; }
+  h3{ font-size:18px; margin:30px 0 12px; color:var(--ink); }
+  p{ margin:0 0 16px; max-width:70ch; color:var(--ink); }
+  section > p:first-of-type{ color:var(--ink-dim); font-size:16.5px; }
+  ul, ol.steps{ margin:0 0 18px; padding-left:22px; max-width:68ch; }
+  li{ margin-bottom:7px; }
+  strong{ color:var(--ink); font-weight:600; }
+
+  .lead-note{
+    color:var(--ink-dim); font-size:15px; max-width:68ch;
+  }
+
+  /* ---------- diagram ---------- */
+  .diagram{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:22px clamp(10px,3vw,28px);
+    margin:22px 0 26px;
+    box-shadow:var(--shadow);
+    overflow-x:auto;
+  }
+  .diagram svg{ display:block; margin:0 auto; min-width:640px; }
+  .diagram .cap{
+    font-family:var(--mono); font-size:12px; color:var(--ink-faint);
+    text-align:center; margin-top:10px;
+  }
+
+  /* ---------- tables ---------- */
+  .tbl-wrap{ overflow-x:auto; margin:18px 0 24px; border:1px solid var(--border); border-radius:10px; }
+  table{ border-collapse:collapse; width:100%; min-width:560px; font-size:14.5px; background:var(--surface); }
+  th, td{ text-align:left; padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:top; }
+  th{
+    font-family:var(--mono); font-size:11.5px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-faint); background:var(--surface-2); font-weight:600;
+  }
+  tr:last-child td{ border-bottom:none; }
+  td code{ font-size:13px; background:var(--surface-2); padding:1px 5px; border-radius:4px; }
+  td.dim, span.dim{ color:var(--ink-dim); }
+
+  /* ---------- code ---------- */
+  .code-block{
+    background:var(--code-bg); color:var(--code-ink);
+    border-radius:10px; margin:16px 0 24px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .code-block .bar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:9px 16px; border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .code-block .file{
+    font-family:var(--mono); font-size:12px; color:#9AA6C0; letter-spacing:.02em;
+  }
+  .code-block pre{ margin:0; padding:16px; overflow-x:auto; }
+  .code-block code{ font-family:var(--mono); font-size:13.2px; line-height:1.65; }
+  .hljs{ background:transparent; }
+  .hljs-comment{ color:#7D8A9E; font-style:italic; }
+  .hljs-keyword, .hljs-title.function_{ color:#8FB2FF; }
+  .hljs-string{ color:#8FD6B8; }
+  .hljs-number{ color:#F2A93B; }
+  .hljs-title.class_{ color:#F2A93B; }
+  .hljs-params, .hljs-variable{ color:#DEE3EC; }
+  .hljs-built_in{ color:#3FD6C4; }
+  .hljs-decorator{ color:#C792EA; }
+
+  /* ---------- formula ---------- */
+  .formula{
+    font-family:var(--mono); font-size:14.5px; background:var(--surface-2);
+    border:1px solid var(--border); border-left:3px solid var(--accent);
+    border-radius:0 8px 8px 0; padding:14px 18px; margin:16px 0 22px; overflow-x:auto;
+    color:var(--ink);
+  }
+  .formula .lbl{ color:var(--ink-faint); font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; display:block; margin-bottom:8px; }
+
+  /* ---------- step list ---------- */
+  ol.steps{ list-style:none; padding:0; counter-reset:step; }
+  ol.steps > li{
+    counter-increment:step;
+    display:grid; grid-template-columns:30px 1fr; gap:12px;
+    margin-bottom:14px; max-width:70ch;
+  }
+  ol.steps > li::before{
+    content:counter(step);
+    font-family:var(--mono); font-size:12.5px; font-weight:600;
+    color:var(--accent); background:var(--fp16-soft);
+    width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* ---------- callout ---------- */
+  .callout{
+    border:1px solid var(--border); background:var(--surface);
+    border-radius:10px; padding:16px 18px; margin:18px 0 24px;
+    display:grid; grid-template-columns:auto 1fr; gap:12px; align-items:start;
+    box-shadow:var(--shadow); max-width:70ch;
+  }
+  .callout .icon{
+    font-family:var(--mono); font-size:12px; font-weight:700; color:var(--int4);
+    background:var(--int4-soft); border-radius:6px; padding:4px 7px; letter-spacing:.03em;
+  }
+  .callout p{ margin:0; font-size:14.5px; color:var(--ink-dim); }
+  .callout p strong{ color:var(--ink); }
+
+  /* ---------- file map ---------- */
+  .filemap{
+    font-family:var(--mono); font-size:13.5px; background:var(--surface);
+    border:1px solid var(--border); border-radius:10px; padding:18px 20px;
+    line-height:1.9; box-shadow:var(--shadow); max-width:70ch;
+  }
+  .filemap .dir{ color:var(--accent); }
+  .filemap .cm{ color:var(--ink-faint); }
+
+  footer{
+    padding:36px 0 0; margin-top:8px;
+    color:var(--ink-faint); font-size:13px; font-family:var(--mono);
+  }
+</style>
+
+<div class="shell">
+  <nav class="toc" aria-label="Table of contents">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#overview">Overview &amp; gap</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#quant">Quantization layer</a></li>
+      <li><a href="#importance">Importance tracker</a></li>
+      <li><a href="#cache">The cache itself</a></li>
+      <li><a href="#retier">Retiering algorithm</a></li>
+      <li><a href="#hf">HF <span class="mono">Cache</span> integration</a></li>
+      <li><a href="#generate">Generation loop</a></li>
+      <li><a href="#memory">Memory accounting</a></li>
+      <li><a href="#testing">Testing &amp; validation</a></li>
+      <li><a href="#eval">Evaluation scripts</a></li>
+      <li><a href="#limits">Limitations</a></li>
+      <li><a href="#files">File map</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow"><span class="dot"></span> Build notes &middot; adaptive_kv package</div>
+      <h1>How the adaptive KV cache is actually built</h1>
+      <p class="lede">A from-the-base walkthrough of the data structures and algorithms behind
+        <strong>AdaptiveKVCache</strong>: what's stored, how a token's precision is decided, and
+        how it plugs into a real <span class="mono">transformers</span> model.</p>
+      <div class="tier-legend">
+        <span class="chip fp16"><span class="sw"></span>FP16 &middot; recent / heavy-hitter</span>
+        <span class="chip int8"><span class="sw"></span>INT8 &middot; medium importance</span>
+        <span class="chip int4"><span class="sw"></span>INT4 &middot; low importance</span>
+      </div>
+    </header>
+
+    <section id="overview">
+      <div class="kicker"><span class="num">01</span></div>
+      <h2>Overview &amp; the gap it fills</h2>
+      <p>The KV cache stores one Key and one Value vector per token, per layer, per attention head, and it
+        grows for as long as generation runs — for long contexts it routinely outgrows the model weights
+        themselves. Every prior method we surveyed compresses it in one of two ways: <strong>evict</strong>
+        tokens outright (H2O, KeyDiff, Spotlight Attention's retrieval), which is a one-way door — once a
+        token is dropped, it's gone even if later context makes it relevant again — or <strong>quantize
+        everything to one fixed bit-width</strong> (AQUA-KV, the AAAI'26 multimodal quantizer), which
+        spends the same bits on a filler token as on the sentence that answers the eventual question.</p>
+      <p>Nothing in the survey does both at once: keep every token, but let <em>which precision</em> it's
+        stored at move continuously — up or down — as its importance changes over the course of generation.
+        That's what this implementation does. Concretely, it is a custom
+        <span class="mono">transformers.Cache</span> subclass that never deletes a cached token; instead,
+        every <span class="mono">realloc_interval</span> steps it re-ranks all cached tokens by a running
+        importance score and re-assigns each one to <span style="color:var(--fp16)">FP16</span>,
+        <span style="color:var(--int8)">INT8</span>, or <span style="color:var(--int4)">INT4</span> storage.</p>
+    </section>
+
+    <section id="architecture">
+      <div class="kicker"><span class="num">02</span></div>
+      <h2>Architecture — one layer's life cycle</h2>
+      <p>Everything below happens once per transformer layer, per generation step. The four modules map
+        directly onto four files in <span class="mono">adaptive_kv/</span>.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 1000 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pipeline: new K/V enters FP16, importance scored, periodically re-tiered across FP16/INT8/INT4 storage, dequantized back to full K/V for attention, which loops back to the start of the next step.">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)"></path>
+            </marker>
+          </defs>
+          <style>
+            .lbl-sm{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; fill:var(--ink-faint); }
+            .ttl{ font-family:'Public Sans',sans-serif; font-weight:600; font-size:13px; fill:var(--ink); }
+            .box{ fill:var(--surface); stroke:var(--border); stroke-width:1; rx:9; }
+            .edge{ stroke:var(--ink-faint); stroke-width:1.3; fill:none; marker-end:url(#arrow); }
+          </style>
+
+          <!-- new tokens -->
+          <rect x="16" y="24" width="150" height="56" class="box"></rect>
+          <text x="91" y="48" text-anchor="middle" class="ttl">new K, V</text>
+          <text x="91" y="66" text-anchor="middle" class="lbl-sm">[H, T_new, D]</text>
+          <path d="M166,52 L206,52" class="edge"></path>
+
+          <!-- fp16 append -->
+          <rect x="210" y="24" width="164" height="56" class="box" style="stroke:var(--fp16)"></rect>
+          <text x="292" y="48" text-anchor="middle" class="ttl" style="fill:var(--fp16)">append → FP16 tier</text>
+          <text x="292" y="66" text-anchor="middle" class="lbl-sm">always enters full precision</text>
+          <path d="M292,80 L292,112" class="edge"></path>
+
+          <!-- importance -->
+          <rect x="196" y="116" width="192" height="58" class="box"></rect>
+          <text x="292" y="140" text-anchor="middle" class="ttl">ImportanceTracker</text>
+          <text x="292" y="158" text-anchor="middle" class="lbl-sm">key-diversity / attn / attn·‖v‖₁</text>
+          <path d="M388,145 L428,145" class="edge"></path>
+
+          <!-- retier decision -->
+          <rect x="432" y="110" width="192" height="70" class="box" style="stroke-dasharray:4 3"></rect>
+          <text x="528" y="134" text-anchor="middle" class="ttl">every realloc_interval</text>
+          <text x="528" y="152" text-anchor="middle" class="lbl-sm">rank by score,</text>
+          <text x="528" y="167" text-anchor="middle" class="lbl-sm">protect recent_window</text>
+          <path d="M624,145 L664,145" class="edge"></path>
+
+          <!-- three tiers -->
+          <rect x="668" y="18" width="148" height="52" rx="9" fill="var(--fp16-soft)" stroke="var(--fp16)"></rect>
+          <text x="742" y="49" text-anchor="middle" class="ttl" style="fill:var(--fp16)">FP16 store</text>
+
+          <rect x="668" y="119" width="148" height="52" rx="9" fill="var(--int8-soft)" stroke="var(--int8)"></rect>
+          <text x="742" y="150" text-anchor="middle" class="ttl" style="fill:var(--int8)">INT8 q + scale/zero</text>
+
+          <rect x="668" y="220" width="148" height="52" rx="9" fill="var(--int4-soft)" stroke="var(--int4)"></rect>
+          <text x="742" y="251" text-anchor="middle" class="ttl" style="fill:var(--int4)">INT4 packed nibbles</text>
+
+          <!-- tiers -> dequantize -->
+          <rect x="864" y="119" width="120" height="52" class="box"></rect>
+          <text x="924" y="140" text-anchor="middle" class="ttl">dequantize</text>
+          <text x="924" y="158" text-anchor="middle" class="lbl-sm">concat all 3 tiers</text>
+
+          <path d="M816,44 C 850,44 850,120 864,140" class="edge"></path>
+          <path d="M816,145 L 864,145" class="edge"></path>
+          <path d="M816,246 C 850,246 850,170 864,150" class="edge"></path>
+
+          <!-- dequantize -> full K,V (loops back under the diagram) -->
+          <rect x="16" y="204" width="150" height="56" class="box"></rect>
+          <text x="91" y="228" text-anchor="middle" class="ttl">full K, V</text>
+          <text x="91" y="246" text-anchor="middle" class="lbl-sm">this step's attention math</text>
+          <path d="M924,171 L924,296 L91,296 L91,264" class="edge"></path>
+        </svg>
+        <div class="cap">One <span class="mono">AdaptiveKVLayer.update()</span> call — new tokens land in FP16, importance updates every step, tiers reshuffle periodically, attention always sees the full dequantized cache.</div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Module</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>quant.py</code></td><td>Per-token, per-head asymmetric INT8 / packed-INT4 quantize &amp; dequantize, plus byte accounting.</td></tr>
+            <tr><td><code>importance.py</code></td><td><code>ImportanceTracker</code> — EMA score per cached token, three scoring modes.</td></tr>
+            <tr><td><code>cache.py</code></td><td><code>AdaptiveKVLayer</code> / <code>AdaptiveKVCache</code> — the tiered storage, retiering policy, and the <code>transformers.Cache</code> contract.</td></tr>
+            <tr><td><code>generate.py</code></td><td>Explicit prefill+decode loop that feeds attention weights back into the cache each step.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="quant">
+      <div class="kicker"><span class="num">03</span></div>
+      <h2>Quantization layer</h2>
+      <p>Both INT8 and INT4 use <strong>asymmetric min-max quantization</strong>, grouped along the last
+        axis of the tensor — which is always <span class="mono">head_dim</span> here, so quantization is
+        effectively per-token, per-head, matching the granularity KIVI and AQUA-KV use for values.</p>
+
+      <div class="formula">
+        <span class="lbl">Quantize (shared derivation for INT8 and INT4)</span>
+scale = (max(x) − min(x)) / (qmax − qmin)
+zero  = min(x) − qmin · scale
+q     = clamp(round((x − zero) / scale), qmin, qmax)
+
+<span class="lbl" style="margin-top:10px">Dequantize</span>
+x̂ = q · scale + zero
+      </div>
+      <p class="lead-note">Because <span class="mono">zero</span> already folds in the <span class="mono">qmin</span> offset,
+        <span class="mono">q</span> lands in <span class="mono">[qmin, qmax]</span> with no further shift needed on
+        either side — an early version of this code added <span class="mono">qmin</span> twice (once in
+        the quantizer, once in the dequantizer) and silently doubled the error; the unit tests in
+        <span class="mono">tests/test_quant.py</span> catch exactly this class of bug by asserting the
+        round-trip error stays within one quantization step.</p>
+
+      <h3>INT4 packing</h3>
+      <p>INT8 codes are stored one-per-byte in a signed <span class="mono">int8</span> tensor. INT4 codes
+        are shifted into the unsigned range <span class="mono">[0, 15]</span> and packed two-per-byte along
+        the head-dimension axis, halving that axis's storage:</p>
+      <div class="code-block">
+        <div class="bar"><span class="file">adaptive_kv/quant.py</span></div>
+        <pre><code class="language-python">def _pack_nibbles(q: torch.Tensor) -> torch.Tensor:
+    # q: uint8 [..., group] with values in [0, 15], group even
+    lo = q[..., 0::2]
+    hi = q[..., 1::2]
+    return (lo | (hi << 4)).to(torch.uint8)   # [..., group // 2]</code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Tier</th><th>Stored per token · head</th><th>Bytes / token · head <span class="dim">(head_dim = D)</span></th></tr></thead>
+          <tbody>
+            <tr><td><span class="chip fp16"><span class="sw"></span>FP16</td><td>raw <code>[D]</code> fp16 vector</td><td class="mono">2·D</td></tr>
+            <tr><td><span class="chip int8"><span class="sw"></span>INT8</td><td><code>[D]</code> int8 codes + scale + zero</td><td class="mono">D + 4</td></tr>
+            <tr><td><span class="chip int4"><span class="sw"></span>INT4</td><td><code>[D/2]</code> packed bytes + scale + zero</td><td class="mono">D/2 + 4</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="lead-note">This is exactly what <code>quant.tier_nbytes()</code> computes, and it's what
+        every "compression ratio" number in the eval scripts is derived from — not an estimate, the actual
+        byte count of the tensors that back the cache.</p>
+    </section>
+
+    <section id="importance">
+      <div class="kicker"><span class="num">04</span></div>
+      <h2>Importance tracker</h2>
+      <p><code>ImportanceTracker</code> holds exactly one running score per cached token — a 1-D tensor,
+        <code>scores[i]</code>, aggregated across attention heads by mean. It supports three ways of
+        producing the raw per-step signal that feeds its EMA:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Mode</th><th>Signal</th><th>Needs</th><th>Provenance</th></tr></thead>
+          <tbody>
+            <tr><td><code>key_diversity</code> <span class="dim">(default)</span></td>
+                <td>1 − cosine(key, mean key)</td>
+                <td>nothing extra — computed from <code>key_states</code> already in the cache</td>
+                <td>KeyDiff (2025)</td></tr>
+            <tr><td><code>attn</code></td>
+                <td>mean attention mass received this step</td>
+                <td>eager attention + <code>output_attentions=True</code></td>
+                <td>H2O (2023)</td></tr>
+            <tr><td><code>attn_value</code></td>
+                <td>attention mass × normalized ‖value‖₁</td>
+                <td>same as above</td>
+                <td>VATP (2024)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><code>key_diversity</code> is the default because it's the only one that works under any attention
+        backend (SDPA, FlashAttention, eager) — it never needs the attention matrix materialized, which is
+        the exact problem KeyDiff's paper identifies with attention-based scoring under
+        FlashAttention/block-wise processing.</p>
+
+      <div class="formula">
+<span class="lbl">EMA update (all three modes converge here)</span>
+scores ← decay · scores + (1 − decay) · raw_signal · N
+
+<span class="lbl" style="margin-top:10px">key_diversity signal, per cached token i</span>
+k̄ = mean over tokens of mean-over-heads(key_i)
+signal_i = max(0, 1 − cos(mean-over-heads(key_i), k̄))
+      </div>
+      <p class="lead-note">Unlike H2O's plain cumulative sum (<code>decay = 1</code> recovers that exact
+        behavior), <code>decay &lt; 1</code> lets a token's score <em>fade</em> as well as grow — which is
+        what allows a token demoted to INT4 to climb back to FP16 later if it becomes relevant again,
+        instead of being permanently written off the way eviction-based methods are.</p>
+    </section>
+
+    <section id="cache">
+      <div class="kicker"><span class="num">05</span></div>
+      <h2>The cache itself — data structures</h2>
+      <p>Each <code>AdaptiveKVLayer</code> is <strong>one transformer layer's</strong> cache. It keeps three
+        completely separate tensor groups — one per precision tier — instead of one array with a
+        per-element dtype tag, because PyTorch tensors are single-dtype: mixed precision has to mean
+        <em>separate tensors</em>, concatenated only when a full view is needed.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Field</th><th>Shape</th><th>Holds</th></tr></thead>
+          <tbody>
+            <tr><td><code>_fp16_k</code>, <code>_fp16_v</code></td><td class="mono">[H, n₀, D]</td><td>Raw fp16 keys/values for the FP16 tier</td></tr>
+            <tr><td><code>_int8_k</code>, <code>_int8_v</code></td><td class="mono">[H, n₁, D]</td><td>int8 codes; paired with <code>_int8_k_scale/_zero</code>, shape <code>[H, n₁, 1]</code></td></tr>
+            <tr><td><code>_int4_k</code>, <code>_int4_v</code></td><td class="mono">[H, n₂, D/2]</td><td>packed nibble codes; paired scale/zero as above</td></tr>
+            <tr><td><code>pos_fp16 / pos_int8 / pos_int4</code></td><td class="mono">[nᵢ]</td><td>global sequence position of each slot — the only thing that determines recency protection</td></tr>
+            <tr><td><code>importance.scores</code></td><td class="mono">[n₀+n₁+n₂]</td><td>running score, kept in the <em>same order</em> as the FP16→INT8→INT4 concatenation</td></tr>
+            <tr><td><code>_global_len</code></td><td>scalar</td><td>total tokens ever appended (monotonic sequence position counter)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <span class="icon">note</span>
+        <p><strong>Order doesn't need to match arrival order.</strong> Keys are cached <em>after</em> RoPE is
+          applied, so each key vector already encodes its own position — attention over a cache is just a
+          weighted sum over whatever's present, causally safe by construction since every cached token
+          necessarily precedes the current one. That's what frees the retiering step (below) to freely
+          reshuffle tokens between tiers without tracking a global ordering.</p>
+      </div>
+
+      <p>Batch size is fixed at 1 throughout — <code>lazy_initialization</code> asserts on it. The tiering
+        decision in this implementation is <em>global</em> per token (shared across heads, averaged), not
+        per-head; both are simplifications made to keep every tensor operation a plain slice/cat instead of
+        a ragged, per-batch-item or per-head bookkeeping structure. See <a href="#limits">Limitations</a>.</p>
+    </section>
+
+    <section id="retier">
+      <div class="kicker"><span class="num">06</span></div>
+      <h2>Retiering algorithm</h2>
+      <p>Called from <code>update()</code> whenever <code>tokens_since_realloc ≥ realloc_interval</code>
+        <em>and</em> the cache already holds at least <code>min_tokens_to_compress</code> tokens.</p>
+
+      <ol class="steps">
+        <li><strong>Dequantize everything, for scoring only.</strong> Pull the full <code>[H, N, D]</code> K
+          and V back to fp16 by concatenating and dequantizing all three tiers — ranking always happens on a
+          clean, uniform-precision view, never on already-degraded numbers.</li>
+        <li><strong>Protect the recent window <em>and</em> the attention sinks.</strong> Any token with
+          <code>position ≥ global_len − recent_window</code> <strong>or</strong>
+          <code>position &lt; sink_tokens</code> is pinned to FP16 regardless of score. The recency guard is
+          the same one H2O and StreamingLLM rely on; the sink-token guard is separate and protects the first
+          few tokens specifically, because StreamingLLM/AQUA-KV/KIVI all find these tokens draw
+          disproportionate attention while having a near-zero value-vector norm — meaning
+          <code>attn_value</code> scoring alone would otherwise undervalue exactly the tokens most likely to
+          matter.</li>
+        <li><strong>Rank the rest by score.</strong> <code>argsort</code> the importance scores of every
+          unprotected token, descending.</li>
+        <li><strong>Split by fraction.</strong> The top <code>fp16_frac</code> of the ranked, unprotected
+          tokens join the protected set at FP16; the next <code>int8_frac</code> go to INT8; everything
+          left over goes to INT4.</li>
+        <li><strong>Rebuild only what changed.</strong> For the INT8/INT4 tiers, tokens whose new tier
+          matches their previous tier keep their already-quantized bytes verbatim (a plain gather); only
+          tokens that actually cross a tier boundary get dequantized-then-requantized
+          (<code>_rebuild_tier()</code>).</li>
+      </ol>
+
+      <div class="code-block">
+        <div class="bar"><span class="file">adaptive_kv/cache.py — AdaptiveKVLayer._retier</span></div>
+        <pre><code class="language-python">protected = (positions >= (self._global_len - self.cfg.recent_window)) | \
+            (positions < self.cfg.sink_tokens)
+order = torch.argsort(scores, descending=True)
+unprotected_order = order[~protected[order]]
+n_rest = unprotected_order.numel()
+n_fp16_extra = int(round(self.cfg.fp16_frac * n_rest))
+n_int8 = int(round(self.cfg.int8_frac * n_rest))
+
+tier = torch.full((n,), INT4, dtype=torch.long, device=self.device)
+tier[protected] = FP16
+tier[unprotected_order[:n_fp16_extra]] = FP16
+tier[unprotected_order[n_fp16_extra:n_fp16_extra + n_int8]] = INT8
+# everything else stays INT4</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="bar"><span class="file">adaptive_kv/cache.py — AdaptiveKVLayer._rebuild_tier (per INT8/INT4 tier)</span></div>
+        <pre><code class="language-python">target_mask = tier == tier_id
+keep_mask = target_mask & (old_tier == tier_id)   # unchanged: reuse stored bytes as-is
+fresh_mask = target_mask & ~keep_mask             # changed tier: (re)quantize from full precision</code></pre>
+      </div>
+
+      <p class="lead-note">Because tokens are never evicted, <code>positions</code> always covers exactly
+        <code>0 .. global_len - 1</code> with no gaps, so "does this token's tier match its previous tier" is
+        a single vectorized lookup table, not a Python loop or eviction-aware bookkeeping. This directly
+        removes the quantization drift a token used to accumulate every time the tiering policy re-ran and
+        simply re-confirmed its current tier — <code>test_retier_reuses_unchanged_quantized_bytes</code>
+        asserts this bit-for-bit. Tokens that actually cross a tier boundary still pick up ordinary
+        quantization error, since that's inherent to storing them at a different bit-width.
+        <code>realloc_interval</code> still trades reallocation responsiveness against the O(N log N) sort
+        cost of each retiering pass.</p>
+    </section>
+
+    <section id="hf">
+      <div class="kicker"><span class="num">07</span></div>
+      <h2>Integration with <span class="mono">transformers.Cache</span></h2>
+      <p>Rather than writing a bespoke generation loop that reimplements attention, the cache plugs into
+        HuggingFace's own extension point: <code>CacheLayerMixin</code>. <code>AdaptiveKVLayer</code>
+        subclasses it and implements the four methods the framework actually calls during a forward pass —
+        the same contract <code>DynamicCache</code>'s own <code>DynamicLayer</code> implements, which is
+        what makes this a true drop-in replacement.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Method</th><th>Contract</th><th>What it does here</th></tr></thead>
+          <tbody>
+            <tr><td><code>lazy_initialization</code></td><td>Called once, on the first real K/V seen</td><td>Infers <code>num_heads</code>/<code>head_dim</code>/dtype, allocates empty tier tensors</td></tr>
+            <tr><td><code>update(key, value)</code></td><td>Store new K/V, return what attention should see</td><td>Appends to FP16, updates importance, maybe retiers, returns the full dequantized cache</td></tr>
+            <tr><td><code>get_seq_length()</code></td><td>Total cached length, for mask/position bookkeeping</td><td><code>n_fp16 + n_int8 + n_int4</code></td></tr>
+            <tr><td><code>get_mask_sizes(query_length)</code></td><td>Sizes the causal mask</td><td><code>(seq_length + query_length, 0)</code> — same as <code>DynamicLayer</code>, since all cached tokens legitimately precede the query</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><code>AdaptiveKVCache</code> itself is a thin <code>Cache</code> subclass — it just constructs one
+        <code>AdaptiveKVLayer</code> per transformer layer and forwards a handful of memory-accounting
+        methods (<code>nbytes()</code>, <code>compression_ratio()</code>, <code>tier_summary()</code>) that
+        sum across layers.</p>
+
+      <div class="code-block">
+        <div class="bar"><span class="file">adaptive_kv/cache.py — usage</span></div>
+        <pre><code class="language-python">cache = AdaptiveKVCache(model.config.num_hidden_layers,
+                         AdaptiveKVConfig(importance_mode="key_diversity"))
+out = model(input_ids=ids, past_key_values=cache, use_cache=True)
+# `cache` now works with model.generate(..., past_key_values=cache) too</code></pre>
+      </div>
+    </section>
+
+    <section id="generate">
+      <div class="kicker"><span class="num">08</span></div>
+      <h2>Generation loop</h2>
+      <p>The <code>key_diversity</code> mode needs nothing beyond what <code>update()</code> already does,
+        so it would run fine under plain <code>model.generate()</code>. The <code>attn</code> and
+        <code>attn_value</code> modes need the real softmax attention weights fed back in after every
+        forward pass — something HF's built-in generation loop has no hook for — so
+        <code>generate_with_adaptive_cache()</code> drives the loop explicitly for all three modes, for
+        consistency and so the eval scripts can time prefill and decode separately.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 900 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Prefill forward pass followed by a per-token decode loop, each calling cache.record_attention when the importance mode needs it.">
+          <style>
+            .lbl2{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; fill:var(--ink-dim); }
+            .ttl2{ font-family:'Public Sans',sans-serif; font-weight:600; font-size:13px; fill:var(--ink); }
+            .box2{ fill:var(--surface); stroke:var(--border); stroke-width:1; rx:9; }
+            .edge2{ stroke:var(--ink-faint); stroke-width:1.3; fill:none; marker-end:url(#arrow); }
+          </style>
+          <rect x="10" y="40" width="150" height="60" class="box2"></rect>
+          <text x="85" y="66" text-anchor="middle" class="ttl2">prefill forward</text>
+          <text x="85" y="84" text-anchor="middle" class="lbl2">whole prompt, once</text>
+
+          <path d="M160,70 L206,70" class="edge2"></path>
+          <rect x="210" y="40" width="150" height="60" class="box2" style="stroke:var(--fp16)"></rect>
+          <text x="285" y="66" text-anchor="middle" class="ttl2" style="fill:var(--fp16)">record_attention</text>
+          <text x="285" y="84" text-anchor="middle" class="lbl2">if mode ≠ key_diversity</text>
+
+          <path d="M360,70 L406,70" class="edge2"></path>
+          <rect x="410" y="40" width="150" height="60" class="box2"></rect>
+          <text x="485" y="66" text-anchor="middle" class="ttl2">argmax next token</text>
+          <text x="485" y="84" text-anchor="middle" class="lbl2">greedy or sampled</text>
+
+          <path d="M560,70 L606,70" class="edge2"></path>
+          <rect x="610" y="40" width="150" height="60" class="box2"></rect>
+          <text x="685" y="66" text-anchor="middle" class="ttl2">decode forward</text>
+          <text x="685" y="84" text-anchor="middle" class="lbl2">1 token, uses cache</text>
+
+          <path d="M685,38 C 685,10 485,10 485,38" class="edge2" style="fill:none"></path>
+          <text x="585" y="14" text-anchor="middle" class="lbl2">loop until max_new_tokens or eos</text>
+        </svg>
+        <div class="cap">Prefill once, then decode token-by-token — <code>cache.record_attention()</code> only runs for the attention-based importance modes.</div>
+      </div>
+
+      <p>Every call, <code>generate_with_adaptive_cache()</code> also records wall-clock time for the
+        prefill and decode phases separately and reads the cache's own byte counters at the end, which is
+        exactly the <code>stats</code> dict the memory/throughput and LongBench eval scripts consume:
+        <code>tokens_per_second</code>, <code>cache_bytes</code>, <code>compression_ratio</code>, and
+        <code>tier_summary</code> — a live <code>{"fp16": …, "int8": …, "int4": …}</code> token count.</p>
+    </section>
+
+    <section id="memory">
+      <div class="kicker"><span class="num">09</span></div>
+      <h2>Memory accounting</h2>
+      <p>Every "compression ratio" reported anywhere in this project is <code>cache.nbytes() /
+        cache.nbytes_fp16_equivalent()</code> — real byte counts of the tensors actually allocated, summed
+        across all layers, never an estimate:</p>
+      <div class="formula">
+nbytes()                 = Σ_layers  2·tier_nbytes(n_fp16,16) + 2·tier_nbytes(n_int8,8) + 2·tier_nbytes(n_int4,4)
+nbytes_fp16_equivalent() = Σ_layers  2·tier_nbytes(n_fp16+n_int8+n_int4, 16)
+compression_ratio()      = nbytes() / nbytes_fp16_equivalent()      <span style="color:var(--ink-faint)"># &lt; 1.0 = smaller than fp16</span>
+      </div>
+      <p class="lead-note">The leading <code>2·</code> accounts for storing both K <em>and</em> V per tier.
+        In the integration test (<code>tests/test_memory_smoke.py</code>), a 300-token synthetic sequence
+        through a tiny 2-layer GQA model came out to <strong>26,592 bytes</strong> in the adaptive cache
+        against <strong>38,400 bytes</strong> in an equivalent <code>DynamicCache</code> — a measured 30.8%
+        reduction, from the default config alone.</p>
+    </section>
+
+    <section id="testing">
+      <div class="kicker"><span class="num">10</span></div>
+      <h2>Testing &amp; validation</h2>
+      <p>Everything is validated against small, randomly-initialized real <code>transformers</code> models
+        (a 2-layer <code>LlamaForCausalLM</code> with grouped-query attention enabled) rather than mocks —
+        so the tests exercise the actual <code>Cache</code> contract, not a stand-in for it. No network
+        access or model download is required to run the suite.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>File</th><th>Covers</th></tr></thead>
+          <tbody>
+            <tr><td><code>test_quant.py</code></td><td>INT8/INT4 round-trip error bounds; nibble pack/unpack idempotency</td></tr>
+            <tr><td><code>test_cache.py</code></td><td>End-to-end generation in all three importance modes; recent-window tokens are never compressed; tier counts stay consistent with total sequence length</td></tr>
+            <tr><td><code>test_memory_smoke.py</code></td><td>Adaptive cache byte count vs. a real <code>DynamicCache</code> baseline on the same sequence</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="lead-note"><code>python -m pytest tests/ -q</code> → <strong>9 passed</strong>
+        (includes a regression test proving unchanged tokens keep byte-identical quantized storage across
+        retiering passes, and a sink-token protection test).</p>
+    </section>
+
+    <section id="eval">
+      <div class="kicker"><span class="num">11</span></div>
+      <h2>Evaluation scripts</h2>
+      <p>Four CLI scripts under <code>scripts/</code>, all targeting Llama-3.2-1B / Qwen2.5-1.5B / Phi-3-mini,
+        cover every metric in the project brief:</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Script</th><th>Metric</th><th>Method</th></tr></thead>
+          <tbody>
+            <tr><td><code>eval_perplexity.py</code></td><td>Perplexity</td><td>WikiText-2, next-token cross-entropy re-encoded through the adaptive cache in 64-token chunks vs. an uncompressed baseline forward pass</td></tr>
+            <tr><td><code>eval_memory_throughput.py</code></td><td>Memory, tokens/sec</td><td>Real byte counts and measured decode-phase throughput vs. a <code>DynamicCache</code> baseline, swept over prompt length</td></tr>
+            <tr><td><code>eval_longbench.py</code></td><td>Task accuracy (F1)</td><td><code>THUDM/LongBench</code> tasks (e.g. NarrativeQA), simplified token-F1 scoring</td></tr>
+            <tr><td><code>eval_niah.py</code></td><td>Needle-in-a-Haystack retrieval</td><td>Synthetic "magic number" fact inserted at swept context length × depth; checks it's reproduced correctly</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="limits">
+      <div class="kicker"><span class="num">12</span></div>
+      <h2>Limitations &amp; design tradeoffs</h2>
+      <ul>
+        <li><strong>Batch size 1.</strong> Tiering is computed once per sequence, not per batch item —
+          <code>lazy_initialization</code> asserts on it. Extending to a per-example policy under batching
+          is a natural next step, not a structural blocker.</li>
+        <li><strong>Global, not per-head, tiering.</strong> Importance is head-averaged before ranking, so
+          every head shares one token's tier assignment — this is the same tradeoff H2O's own "global vs.
+          local statistic" ablation makes, kept here so tensor slices stay regular.</li>
+        <li><strong>Tier-boundary crossings still cost a re-quantization.</strong> Tokens whose tier
+          assignment is unchanged between retiering passes now reuse their stored bytes verbatim (see §6),
+          so that drift is gone. Tokens that actively oscillate between tiers across many reallocations
+          still pick up ordinary quantization error each time they cross a boundary — inherent to
+          representing them at a different bit-width, not an implementation shortcut.</li>
+        <li><strong>Simulation-grade throughput.</strong> Quantize/dequantize run in plain PyTorch, not a
+          fused kernel, so <code>tokens_per_second</code> reflects Python-level overhead, not a lower bound
+          on what a production kernel (e.g. built on vLLM or llama.cpp) could achieve.</li>
+      </ul>
+    </section>
+
+    <section id="files">
+      <div class="kicker"><span class="num">13</span></div>
+      <h2>File map</h2>
+      <div class="filemap">
+adaptive_kv/<br>
+&nbsp;&nbsp;__init__.py&nbsp;&nbsp;<span class="cm"># exports AdaptiveKVCache, AdaptiveKVConfig, ImportanceTracker</span><br>
+&nbsp;&nbsp;quant.py&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># INT8 / INT4 quantize, dequantize, byte accounting</span><br>
+&nbsp;&nbsp;importance.py&nbsp;<span class="cm"># ImportanceTracker — 3 scoring modes</span><br>
+&nbsp;&nbsp;cache.py&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># AdaptiveKVLayer, AdaptiveKVCache, retiering policy</span><br>
+&nbsp;&nbsp;generate.py&nbsp;&nbsp;<span class="cm"># explicit prefill+decode loop</span><br>
+scripts/<br>
+&nbsp;&nbsp;eval_perplexity.py<br>
+&nbsp;&nbsp;eval_memory_throughput.py<br>
+&nbsp;&nbsp;eval_longbench.py<br>
+&nbsp;&nbsp;eval_niah.py<br>
+tests/<br>
+&nbsp;&nbsp;test_quant.py&nbsp;&nbsp;test_cache.py&nbsp;&nbsp;test_memory_smoke.py
+      </div>
+    </section>
+
+    <footer>adaptive_kv — build notes · batch_size = 1 · default mode = key_diversity</footer>
+  </main>
+</div>
+
+<script>
+  try { hljs.highlightAll(); } catch (e) {}
+</script>
