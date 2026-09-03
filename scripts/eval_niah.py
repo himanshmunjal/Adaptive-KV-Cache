@@ -9,8 +9,11 @@ Usage:
         --context-lengths 1000 4000 8000 --depths 0.1 0.5 0.9
 """
 import argparse
+import csv
+import json
 import random
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import torch
@@ -55,15 +58,22 @@ def main():
     ap.add_argument("--trials-per-cell", type=int, default=3)
     ap.add_argument("--importance-mode", default="key_diversity",
                      choices=["key_diversity", "attn", "attn_value"])
+    ap.add_argument("--output-dir", default="results",
+                     help="Directory to write per-run JSON + CSV results into (default: results/)")
+    ap.add_argument("--run-name", default=None,
+                     help="Basename for the output files (default: derived from model + timestamp)")
     args = ap.parse_args()
 
     tok = AutoTokenizer.from_pretrained(args.model)
     attn_impl = "eager" if args.importance_mode != "key_diversity" else None
     model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=torch.float16,
-                                                  attn_implementation=attn_impl)
+                                                  attn_implementation=attn_impl,
+                                                  device_map="auto")
     model.eval()
+    print(f"Model loaded on device: {model.device}")
     cfg = AdaptiveKVConfig(importance_mode=args.importance_mode)
 
+    results = []
     print(f"{'ctx_len':>8} {'depth':>6} {'baseline_acc':>12} {'adaptive_acc':>12}")
     for L in args.context_lengths:
         for d in args.depths:
@@ -78,8 +88,40 @@ def main():
                 adapt_ans = stats["generated_text"]
                 base_hits += str(secret) in base_ans
                 adapt_hits += str(secret) in adapt_ans
-            print(f"{L:>8} {d:>6.2f} {base_hits / args.trials_per_cell:>12.2f} "
-                  f"{adapt_hits / args.trials_per_cell:>12.2f}")
+            base_acc = base_hits / args.trials_per_cell
+            adapt_acc = adapt_hits / args.trials_per_cell
+            print(f"{L:>8} {d:>6.2f} {base_acc:>12.2f} {adapt_acc:>12.2f}")
+            results.append({
+                "context_length": L, "depth": d,
+                "baseline_acc": base_acc, "adaptive_acc": adapt_acc,
+            })
+
+    # ---------------------------------------------------------------- #
+    # Persist results
+    # ---------------------------------------------------------------- #
+    out_dir = Path(args.output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    run_name = args.run_name or f"{args.model.replace('/', '_')}_niah_{timestamp}"
+
+    payload = {
+        "run_name": run_name,
+        "timestamp_utc": timestamp,
+        "args": vars(args),
+        "results": results,
+    }
+
+    json_path = out_dir / f"{run_name}.json"
+    with open(json_path, "w") as f:
+        json.dump(payload, f, indent=2)
+
+    csv_path = out_dir / f"{run_name}.csv"
+    with open(csv_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["context_length", "depth", "baseline_acc", "adaptive_acc"])
+        writer.writeheader()
+        writer.writerows(results)
+
+    print(f"\nSaved results to:\n  {json_path}\n  {csv_path}")
 
 
 if __name__ == "__main__":

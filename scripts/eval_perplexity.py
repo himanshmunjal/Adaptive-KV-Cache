@@ -94,10 +94,12 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(
         args.model, torch_dtype=torch.float16,
         attn_implementation=attn_impl,
+        device_map="auto",
     )
     model.eval()
+    print(f"Model loaded on device: {model.device}")
 
-    ds = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+    ds = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="test")
     text = "\n\n".join(ds["text"])
     ids_all = tok(text, return_tensors="pt")["input_ids"][0]
 
@@ -112,6 +114,7 @@ def main():
         chunk = ids_all[start:start + args.seq_len].unsqueeze(0)
         if chunk.shape[1] < args.seq_len:
             break
+        chunk = chunk.to(model.device)
         base_losses.append(ppl_baseline(model, chunk))
         adapt_loss, cache = ppl_adaptive(model, chunk, cfg)
         adapt_losses.append(adapt_loss)

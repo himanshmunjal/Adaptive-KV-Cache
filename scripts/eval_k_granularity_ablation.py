@@ -16,7 +16,10 @@ Usage:
     python scripts/eval_k_granularity_ablation.py --model Qwen/Qwen2.5-1.5B-Instruct --seq-len 1024
 """
 import argparse
+import csv
+import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import torch
@@ -97,20 +100,29 @@ def main():
     ap.add_argument("--int8-frac", type=float, default=0.3)
     ap.add_argument("--realloc-interval", type=int, default=16)
     ap.add_argument("--min-tokens-to-compress", type=int, default=32)
+    ap.add_argument("--output-dir", default="results",
+                     help="Directory to write per-run JSON + CSV results into (default: results/)")
+    ap.add_argument("--run-name", default=None,
+                     help="Basename for the output files (default: derived from model + timestamp)")
     args = ap.parse_args()
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if args.model:
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         tok = AutoTokenizer.from_pretrained(args.model)
-        model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=torch.float16)
+        model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=torch.float16,
+                                                      device_map="auto")
         model.eval()
         text = "The quick brown fox jumps over the lazy dog. " * 200
-        ids = tok(text, return_tensors="pt")["input_ids"][:, : args.seq_len]
+        ids = tok(text, return_tensors="pt")["input_ids"][:, : args.seq_len].to(model.device)
     else:
         model, tok, vocab_size = _tiny_model_and_tokenizer()
+        model = model.to(device)
         torch.manual_seed(1)
-        ids = torch.randint(3, vocab_size, (1, args.seq_len))
+        ids = torch.randint(3, vocab_size, (1, args.seq_len), device=device)
+    print(f"Model loaded on device: {next(model.parameters()).device}")
 
     common = dict(
         recent_window=args.recent_window, sink_tokens=4,
@@ -134,6 +146,40 @@ def main():
     mae_reduction = 1 - results["channel"]["k_mae"] / results["token"]["k_mae"]
     print(f"\nPer-channel K quantization K-MAE change vs. per-token K: "
           f"{mae_reduction * 100:+.1f}% (positive = lower error)")
+
+    # ---------------------------------------------------------------- #
+    # Persist results
+    # ---------------------------------------------------------------- #
+    out_dir = Path(args.output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    model_tag = args.model.replace("/", "_") if args.model else "tiny_synthetic"
+    run_name = args.run_name or f"{model_tag}_k_granularity_ablation_{timestamp}"
+
+    payload = {
+        "run_name": run_name,
+        "timestamp_utc": timestamp,
+        "args": vars(args),
+        "results": results,
+        "k_mae_reduction_pct": mae_reduction * 100,
+    }
+
+    json_path = out_dir / f"{run_name}.json"
+    with open(json_path, "w") as f:
+        json.dump(payload, f, indent=2)
+
+    csv_path = out_dir / f"{run_name}.csv"
+    with open(csv_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["granularity", "k_mae", "nll", "compression_ratio", "tier_summary"])
+        writer.writeheader()
+        for gran in ("token", "channel"):
+            r = results[gran]
+            writer.writerow({
+                "granularity": gran, "k_mae": r["k_mae"], "nll": r["nll"],
+                "compression_ratio": r["compression_ratio"], "tier_summary": r["tier_summary"],
+            })
+
+    print(f"\nSaved results to:\n  {json_path}\n  {csv_path}")
 
 
 if __name__ == "__main__":

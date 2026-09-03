@@ -143,7 +143,23 @@ class AdaptiveKVLayer(CacheLayerMixin):
             self._tokens_since_realloc = 0
 
         full_k, full_v = self._full_kv_dequant()
-        self._last_order_positions = self._concat_positions()
+        positions = self._concat_positions()
+        # `_full_kv_dequant` concatenates tiers in *storage* order
+        # ([fp16 tokens, int8 tokens, int4 tokens]), which is NOT the same
+        # as ascending sequence-position order once `_retier()` has run
+        # (tokens get grouped by tier, not by position). HF's cache/mask
+        # machinery assumes array index i == absolute position i (that's how
+        # the causal mask and position_ids get derived from get_seq_length()),
+        # so returning KV in storage order silently corrupts the causal mask
+        # -- some legitimately-past tokens get masked as "future" and, worse,
+        # some genuinely-future tokens can end up unmasked (partial leakage).
+        # Sort back into position order before handing off; safe because this
+        # cache never evicts, so `positions` always covers exactly
+        # `0 .. global_len - 1` with no gaps.
+        order = positions.argsort()
+        full_k = full_k.index_select(1, order)
+        full_v = full_v.index_select(1, order)
+        self._last_order_positions = positions.index_select(0, order)
         return full_k.unsqueeze(0), full_v.unsqueeze(0)
 
     def get_mask_sizes(self, query_length: int) -> tuple[int, int]:
