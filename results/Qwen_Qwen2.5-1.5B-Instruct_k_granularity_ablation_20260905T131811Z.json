@@ -1,0 +1,38 @@
+{
+  "run_name": "Qwen_Qwen2.5-1.5B-Instruct_k_granularity_ablation_20260905T131811Z",
+  "timestamp_utc": "20260905T131811Z",
+  "args": {
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "seq_len": 1024,
+    "recent_window": 16,
+    "fp16_frac": 0.2,
+    "int8_frac": 0.3,
+    "realloc_interval": 16,
+    "min_tokens_to_compress": 32,
+    "output_dir": "results",
+    "run_name": null
+  },
+  "results": {
+    "token": {
+      "nll": 8.015884652981427,
+      "k_mae": 1.6206752232142858,
+      "compression_ratio": 0.4976043701171875,
+      "tier_summary": {
+        "fp16": 6188,
+        "int8": 8428,
+        "int4": 14056
+      }
+    },
+    "channel": {
+      "nll": 1.9416659029814272,
+      "k_mae": 1.3397391183035714,
+      "compression_ratio": 0.5324935913085938,
+      "tier_summary": {
+        "fp16": 6188,
+        "int8": 8428,
+        "int4": 14056
+      }
+    }
+  },
+  "k_mae_reduction_pct": 17.33450977016442
+}

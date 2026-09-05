@@ -1,0 +1,145 @@
+{
+  "run_name": "Qwen_Qwen2.5-1.5B-Instruct_20260905T125915Z",
+  "timestamp_utc": "20260905T125915Z",
+  "args": {
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "seq_len": 2048,
+    "n_sequences": 20,
+    "importance_mode": "key_diversity",
+    "recent_window": 64,
+    "fp16_frac": 0.3,
+    "int8_frac": 0.3,
+    "output_dir": "results",
+    "run_name": null,
+    "sanity_check": false
+  },
+  "per_sequence": [
+    {
+      "sequence": 0,
+      "base_nll": 1.9904162883758545,
+      "adaptive_nll": 1.9926111382510991,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 1,
+      "base_nll": 2.4047248363494873,
+      "adaptive_nll": 2.4062957987298486,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 2,
+      "base_nll": 2.635056734085083,
+      "adaptive_nll": 2.636388617489008,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 3,
+      "base_nll": 2.466649055480957,
+      "adaptive_nll": 2.469803370786517,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 4,
+      "base_nll": 2.1893627643585205,
+      "adaptive_nll": 2.190186858817782,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 5,
+      "base_nll": 1.7590203285217285,
+      "adaptive_nll": 1.7598619931607231,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 6,
+      "base_nll": 1.5392333269119263,
+      "adaptive_nll": 1.5415165486077187,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 7,
+      "base_nll": 2.0903074741363525,
+      "adaptive_nll": 2.090437225207621,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 8,
+      "base_nll": 2.264974355697632,
+      "adaptive_nll": 2.2675867122618465,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 9,
+      "base_nll": 2.388669490814209,
+      "adaptive_nll": 2.390052515876893,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 10,
+      "base_nll": 2.252570629119873,
+      "adaptive_nll": 2.2545493404982904,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 11,
+      "base_nll": 2.2488903999328613,
+      "adaptive_nll": 2.2493282852955545,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 12,
+      "base_nll": 2.2242372035980225,
+      "adaptive_nll": 2.224596971177333,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 13,
+      "base_nll": 2.3679299354553223,
+      "adaptive_nll": 2.370633854421104,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 14,
+      "base_nll": 2.3066725730895996,
+      "adaptive_nll": 2.3125,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 15,
+      "base_nll": 2.3938796520233154,
+      "adaptive_nll": 2.3933194919394234,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 16,
+      "base_nll": 2.5970842838287354,
+      "adaptive_nll": 2.5984978016609674,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 17,
+      "base_nll": 2.375544786453247,
+      "adaptive_nll": 2.3803431851489987,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 18,
+      "base_nll": 2.200223207473755,
+      "adaptive_nll": 2.199682462139717,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 19,
+      "base_nll": 2.0578012466430664,
+      "adaptive_nll": 2.0579506595017096,
+      "compression_ratio": 0.6039199829101562
+    }
+  ],
+  "summary": {
+    "baseline_perplexity": 9.371399348761594,
+    "adaptive_perplexity": 9.386825292600573,
+    "relative_degradation_pct": 0.16460662132615766,
+    "mean_compression_ratio": 0.6039199829101562,
+    "memory_reduction_pct": 39.608001708984375
+  }
+}

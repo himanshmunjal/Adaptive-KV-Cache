@@ -1,0 +1,42 @@
+{
+  "run_name": "Qwen_Qwen2.5-1.5B-Instruct_memthroughput_20260905T130123Z",
+  "timestamp_utc": "20260905T130123Z",
+  "args": {
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "prompt_lengths": [
+      512,
+      2048,
+      8192
+    ],
+    "max_new_tokens": 128,
+    "importance_mode": "key_diversity",
+    "output_dir": "results",
+    "run_name": null
+  },
+  "results": [
+    {
+      "prompt_length": 512,
+      "baseline_cache_mb": 18.35008,
+      "adaptive_cache_mb": 11.276832,
+      "memory_reduction_pct": 38.546142578125,
+      "baseline_tokens_per_second": 39.6767591436404,
+      "adaptive_tokens_per_second": 12.741557348688588
+    },
+    {
+      "prompt_length": 2048,
+      "baseline_cache_mb": 62.390272,
+      "adaptive_cache_mb": 37.265088,
+      "memory_reduction_pct": 40.27099609375,
+      "baseline_tokens_per_second": 42.294077305079064,
+      "adaptive_tokens_per_second": 12.221942939352402
+    },
+    {
+      "prompt_length": 8192,
+      "baseline_cache_mb": 118.386688,
+      "adaptive_cache_mb": 70.293216,
+      "memory_reduction_pct": 40.62405394768709,
+      "baseline_tokens_per_second": 39.931405107780726,
+      "adaptive_tokens_per_second": 12.71117359520136
+    }
+  ]
+}

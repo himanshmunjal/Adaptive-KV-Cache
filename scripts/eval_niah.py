@@ -28,16 +28,57 @@ FILLER = (
     "Birds were singing in the trees. It was a beautiful day for a walk in the park. "
 )
 
+# Labels for the distractor "magic number" sentences seeded alongside the real
+# needle (see `build_haystack`). Distinct from "this" so the question ("the
+# magic number for *this* test") stays unambiguous while still forcing the
+# model to actually locate the right sentence rather than pattern-matching on
+# the only number-shaped sentence in the haystack.
+_DISTRACTOR_LABELS = ["morning", "afternoon", "weekend", "holiday", "evening", "winter"]
 
-def build_haystack(tok, n_tokens: int, depth: float, secret: int) -> tuple[str, str]:
+
+def build_haystack(tok, n_tokens: int, depth: float, secret: int,
+                    n_distractors: int = 3, rng: random.Random | None = None) -> tuple[str, str]:
+    """A single real needle ("magic number for *this* test") plus
+    `n_distractors` decoy needles of near-identical phrasing but different
+    numbers, scattered at random depths distinct from the real one. Without
+    decoys, the real needle is the only number-bearing sentence anywhere in
+    the haystack, so the task can be solved by "find the one sentence with a
+    number" rather than by genuinely locating and reading the right position
+    -- which made every context-length/depth cell score a trivial 100% for
+    both baseline and adaptive cache alike, leaving no room to detect any
+    compression-induced retrieval degradation (a ceiling effect).
+    """
+    rng = rng or random
     needle = f"The special magic number for this test is {secret}. Remember it well."
     filler_ids = tok(FILLER, return_tensors="pt")["input_ids"][0]
     n_filler_needed = n_tokens
     reps = n_filler_needed // filler_ids.shape[0] + 2
     long_filler = tok.decode(filler_ids.repeat(reps)[:n_tokens], skip_special_tokens=True)
-    insert_char = int(len(long_filler) * depth)
-    haystack = long_filler[:insert_char] + " " + needle + " " + long_filler[insert_char:]
-    question = "\n\nWhat is the special magic number mentioned in the text above? Answer with just the number."
+
+    labels = rng.sample(_DISTRACTOR_LABELS, min(n_distractors, len(_DISTRACTOR_LABELS)))
+    used_secrets = {secret}
+    inserts = [(depth, needle)]
+    for label in labels:
+        d_secret = rng.randint(10000, 99999)
+        while d_secret in used_secrets:
+            d_secret = rng.randint(10000, 99999)
+        used_secrets.add(d_secret)
+        d_depth = rng.random()
+        inserts.append((d_depth, f"The special magic number for the {label} test is {d_secret}. Remember it well."))
+    inserts.sort(key=lambda x: x[0])
+
+    pieces, prev_char = [], 0
+    for d, sentence in inserts:
+        insert_char = int(len(long_filler) * d)
+        insert_char = max(insert_char, prev_char)
+        pieces.append(long_filler[prev_char:insert_char])
+        pieces.append(" " + sentence + " ")
+        prev_char = insert_char
+    pieces.append(long_filler[prev_char:])
+    haystack = "".join(pieces)
+
+    question = ("\n\nSeveral 'magic numbers' are mentioned in the text above, one per test. "
+                "What is the special magic number for THIS test specifically? Answer with just the number.")
     return haystack + question, needle
 
 
@@ -55,7 +96,10 @@ def main():
     ap.add_argument("--model", required=True)
     ap.add_argument("--context-lengths", type=int, nargs="+", default=[1000, 4000])
     ap.add_argument("--depths", type=float, nargs="+", default=[0.1, 0.5, 0.9])
-    ap.add_argument("--trials-per-cell", type=int, default=3)
+    ap.add_argument("--trials-per-cell", type=int, default=5)
+    ap.add_argument("--n-distractors", type=int, default=3,
+                     help="Decoy 'magic number' sentences seeded alongside the real needle, "
+                          "to avoid a trivial ceiling effect (see build_haystack)")
     ap.add_argument("--importance-mode", default="key_diversity",
                      choices=["key_diversity", "attn", "attn_value"])
     ap.add_argument("--output-dir", default="results",
@@ -80,7 +124,7 @@ def main():
             base_hits, adapt_hits = 0, 0
             for t in range(args.trials_per_cell):
                 secret = random.randint(10000, 99999)
-                prompt, needle = build_haystack(tok, L, d, secret)
+                prompt, needle = build_haystack(tok, L, d, secret, n_distractors=args.n_distractors)
                 base_ans = generate_baseline(model, tok, prompt)
                 _, stats = generate_with_adaptive_cache(
                     model, tok, prompt, max_new_tokens=16, cache_config=cfg, return_stats=True,

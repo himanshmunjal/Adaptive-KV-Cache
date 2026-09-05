@@ -1,0 +1,12 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights:   3%|▎         | 11/338 [00:00<00:03, 108.40it/s]Loading weights:  15%|█▌        | 52/338 [00:00<00:01, 275.51it/s]Loading weights:  37%|███▋      | 124/338 [00:00<00:00, 470.14it/s]Loading weights:  58%|█████▊    | 196/338 [00:00<00:00, 562.30it/s]Loading weights:  79%|███████▉  | 267/338 [00:00<00:00, 610.54it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 556.46it/s]
+Model loaded on device: cuda:0
+prompt_len |  baseline MB |  adaptive MB | reduction | baseline tok/s | adaptive tok/s
+       512 |         18.4 |         11.3 |     38.5% |          35.13 |          11.92
+      2048 |         62.4 |         37.3 |     40.3% |          35.43 |          11.89
+      8192 |        118.4 |         70.3 |     40.6% |          28.25 |          11.59
+
+Saved results to:
+  results/Qwen_Qwen2.5-1.5B-Instruct_memthroughput_20260905T130721Z.json
+  results/Qwen_Qwen2.5-1.5B-Instruct_memthroughput_20260905T130721Z.csv

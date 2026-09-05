@@ -97,10 +97,32 @@ def _longbench_parquet_files(task: str) -> list[str]:
     )
 
 
+def truncate_middle(tok, text: str, max_tokens: int) -> str:
+    """Truncate `text` to at most `max_tokens` tokens by dropping the *middle*
+    and keeping the first/last halves, matching the official LongBench
+    truncation strategy. Naively truncating the tokenized *prompt* (context +
+    question) from the right/left instead -- as this script used to do via
+    `tokenizer(..., truncation=True, max_length=...)` -- silently chops off
+    the appended question/answer suffix entirely whenever the context alone
+    exceeds `max_tokens` (true for most LongBench documents, which run to
+    tens of thousands of tokens), leaving the model to blindly continue the
+    document with no idea what's being asked. That produced near-zero F1 for
+    *both* baseline and adaptive alike, masking any real compression-vs-
+    quality signal -- this truncates only the context, before the question is
+    appended, so the question always survives.
+    """
+    ids = tok(text, add_special_tokens=False)["input_ids"]
+    if len(ids) <= max_tokens:
+        return text
+    half = max_tokens // 2
+    ids = ids[:half] + ids[-half:]
+    return tok.decode(ids, skip_special_tokens=True)
+
+
 @torch.no_grad()
 def generate_baseline(model, tok, prompt: str, max_new_tokens: int) -> str:
     from transformers import DynamicCache
-    inputs = tok(prompt, return_tensors="pt", truncation=True, max_length=7500).to(model.device)
+    inputs = tok(prompt, return_tensors="pt").to(model.device)
     cache = DynamicCache()
     out_ids = model.generate(**inputs, past_key_values=cache, max_new_tokens=max_new_tokens,
                               do_sample=False, pad_token_id=tok.eos_token_id)
@@ -113,6 +135,9 @@ def main():
     ap.add_argument("--task", default="narrativeqa")
     ap.add_argument("--n-samples", type=int, default=20)
     ap.add_argument("--max-new-tokens", type=int, default=64)
+    ap.add_argument("--max-context-tokens", type=int, default=7500,
+                     help="Token budget for the document context (the question/answer suffix is "
+                          "appended after truncation, so it always survives)")
     ap.add_argument("--importance-mode", default="key_diversity",
                      choices=["key_diversity", "attn", "attn_value"])
     ap.add_argument("--output-dir", default="results",
@@ -151,14 +176,14 @@ def main():
     per_sample = []
     for i in range(n):
         ex = ds[i]
-        prompt = ex["context"] + "\n\nQuestion: " + ex["input"] + "\nAnswer:"
+        context = truncate_middle(tok, ex["context"], args.max_context_tokens)
+        prompt = context + "\n\nQuestion: " + ex["input"] + "\nAnswer:"
         golds = ex["answers"]
 
         base_out = generate_baseline(model, tok, prompt, args.max_new_tokens)
         _, stats = generate_with_adaptive_cache(
             model, tok, prompt, max_new_tokens=args.max_new_tokens,
             cache_config=cfg, return_stats=True,
-            max_length=7500,
         )
         adapt_out = stats["generated_text"]
 

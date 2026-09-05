@@ -1,0 +1,35 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights:   0%|          | 1/338 [00:00<03:24,  1.65it/s]Loading weights:  12%|█▏        | 39/338 [00:00<00:04, 71.23it/s]Loading weights:  17%|█▋        | 59/338 [00:00<00:03, 80.91it/s]Loading weights:  22%|██▏       | 74/338 [00:01<00:03, 78.24it/s]Loading weights:  25%|██▌       | 86/338 [00:01<00:03, 74.51it/s]Loading weights:  28%|██▊       | 96/338 [00:01<00:03, 65.62it/s]Loading weights:  31%|███       | 105/338 [00:01<00:03, 66.94it/s]Loading weights:  33%|███▎      | 113/338 [00:01<00:03, 59.71it/s]Loading weights:  36%|███▋      | 123/338 [00:02<00:03, 55.84it/s]Loading weights:  40%|███▉      | 135/338 [00:02<00:03, 63.81it/s]Loading weights:  43%|████▎     | 147/338 [00:02<00:03, 59.23it/s]Loading weights:  46%|████▌     | 154/338 [00:02<00:03, 56.54it/s]Loading weights:  50%|█████     | 169/338 [00:02<00:02, 72.18it/s]Loading weights:  52%|█████▏    | 177/338 [00:02<00:02, 70.30it/s]Loading weights:  55%|█████▍    | 185/338 [00:03<00:03, 47.81it/s]Loading weights:  58%|█████▊    | 196/338 [00:03<00:02, 54.22it/s]Loading weights:  61%|██████    | 207/338 [00:03<00:02, 64.60it/s]Loading weights:  65%|██████▍   | 219/338 [00:03<00:01, 63.42it/s]Loading weights:  67%|██████▋   | 227/338 [00:03<00:01, 66.02it/s]Loading weights:  70%|██████▉   | 235/338 [00:03<00:01, 61.06it/s]Loading weights:  72%|███████▏  | 243/338 [00:03<00:01, 64.31it/s]Loading weights:  74%|███████▍  | 250/338 [00:04<00:01, 62.62it/s]Loading weights:  76%|███████▌  | 257/338 [00:04<00:01, 44.04it/s]Loading weights:  80%|███████▉  | 269/338 [00:04<00:01, 53.34it/s]Loading weights:  83%|████████▎ | 281/338 [00:04<00:00, 63.19it/s]Loading weights:  86%|████████▌ | 291/338 [00:04<00:00, 66.13it/s]Loading weights:  88%|████████▊ | 299/338 [00:04<00:00, 64.17it/s]Loading weights:  91%|█████████ | 306/338 [00:05<00:00, 57.30it/s]Loading weights:  93%|█████████▎| 315/338 [00:05<00:00, 58.97it/s]Loading weights:  97%|█████████▋| 327/338 [00:05<00:00, 58.83it/s]Loading weights: 100%|██████████| 338/338 [00:05<00:00, 61.91it/s]
+Model loaded on device: cuda:0
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (299078 > 131072). Running this sequence through the model will result in indexing errors
+[seq 0] base_nll=1.9904  adaptive_nll=1.9926  compression=0.604
+[seq 1] base_nll=2.4047  adaptive_nll=2.4063  compression=0.604
+[seq 2] base_nll=2.6351  adaptive_nll=2.6364  compression=0.604
+[seq 3] base_nll=2.4666  adaptive_nll=2.4698  compression=0.604
+[seq 4] base_nll=2.1894  adaptive_nll=2.1902  compression=0.604
+[seq 5] base_nll=1.7590  adaptive_nll=1.7599  compression=0.604
+[seq 6] base_nll=1.5392  adaptive_nll=1.5415  compression=0.604
+[seq 7] base_nll=2.0903  adaptive_nll=2.0904  compression=0.604
+[seq 8] base_nll=2.2650  adaptive_nll=2.2676  compression=0.604
+[seq 9] base_nll=2.3887  adaptive_nll=2.3901  compression=0.604
+[seq 10] base_nll=2.2526  adaptive_nll=2.2545  compression=0.604
+[seq 11] base_nll=2.2489  adaptive_nll=2.2493  compression=0.604
+[seq 12] base_nll=2.2242  adaptive_nll=2.2246  compression=0.604
+[seq 13] base_nll=2.3679  adaptive_nll=2.3706  compression=0.604
+[seq 14] base_nll=2.3067  adaptive_nll=2.3125  compression=0.604
+[seq 15] base_nll=2.3939  adaptive_nll=2.3933  compression=0.604
+[seq 16] base_nll=2.5971  adaptive_nll=2.5985  compression=0.604
+[seq 17] base_nll=2.3755  adaptive_nll=2.3803  compression=0.604
+[seq 18] base_nll=2.2002  adaptive_nll=2.1997  compression=0.604
+[seq 19] base_nll=2.0578  adaptive_nll=2.0580  compression=0.604
+
+=== Summary ===
+Baseline (FP16, full cache) perplexity: 9.371
+Adaptive KV cache perplexity:            9.387
+Relative degradation:                    0.16%
+Mean KV-cache compression ratio:          0.604  (39.6% memory reduction)
+
+Saved results to:
+  results/Qwen_Qwen2.5-1.5B-Instruct_20260905T130530Z.json
+  results/Qwen_Qwen2.5-1.5B-Instruct_20260905T130530Z.csv

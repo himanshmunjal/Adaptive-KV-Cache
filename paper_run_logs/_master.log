@@ -1,0 +1,48 @@
++ source /workspace/Adaptive-KV-Cache/.venv/bin/activate
+++ deactivate nondestructive
+++ '[' -n '' ']'
+++ '[' -n '' ']'
+++ hash -r
+++ '[' -n '' ']'
+++ unset VIRTUAL_ENV
+++ unset VIRTUAL_ENV_PROMPT
+++ '[' '!' nondestructive = nondestructive ']'
+++ '[' linux-gnu = cygwin ']'
+++ '[' linux-gnu = msys ']'
+++ export VIRTUAL_ENV=/workspace/Adaptive-KV-Cache/.venv
+++ VIRTUAL_ENV=/workspace/Adaptive-KV-Cache/.venv
+++ _OLD_VIRTUAL_PATH=/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+++ PATH=/workspace/Adaptive-KV-Cache/.venv/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+++ export PATH
+++ '[' -n '' ']'
+++ '[' -z '' ']'
+++ _OLD_VIRTUAL_PS1=
+++ PS1='(.venv) '
+++ export PS1
+++ VIRTUAL_ENV_PROMPT='(.venv) '
+++ export VIRTUAL_ENV_PROMPT
+++ hash -r
++ cd /workspace/Adaptive-KV-Cache
++ LOG=paper_run_logs
++ for MODEL in "Qwen/Qwen2.5-1.5B-Instruct" "microsoft/Phi-3-mini-4k-instruct"
+++ echo Qwen/Qwen2.5-1.5B-Instruct
+++ tr / _
++ TAG=Qwen_Qwen2.5-1.5B-Instruct
++ python scripts/eval_perplexity.py --model Qwen/Qwen2.5-1.5B-Instruct --seq-len 2048 --n-sequences 5 --sanity-check
++ python scripts/eval_perplexity.py --model Qwen/Qwen2.5-1.5B-Instruct --seq-len 2048 --n-sequences 20
++ python scripts/eval_memory_throughput.py --model Qwen/Qwen2.5-1.5B-Instruct --prompt-lengths 512 2048 8192 --max-new-tokens 128
++ python scripts/eval_niah.py --model Qwen/Qwen2.5-1.5B-Instruct --context-lengths 1000 4000 8000 --depths 0.1 0.5 0.9
++ python scripts/eval_longbench.py --model Qwen/Qwen2.5-1.5B-Instruct --task narrativeqa --n-samples 30
++ python scripts/eval_k_granularity_ablation.py --model Qwen/Qwen2.5-1.5B-Instruct --seq-len 1024
++ for MODEL in "Qwen/Qwen2.5-1.5B-Instruct" "microsoft/Phi-3-mini-4k-instruct"
+++ echo microsoft/Phi-3-mini-4k-instruct
+++ tr / _
++ TAG=microsoft_Phi-3-mini-4k-instruct
++ python scripts/eval_perplexity.py --model microsoft/Phi-3-mini-4k-instruct --seq-len 2048 --n-sequences 5 --sanity-check
++ python scripts/eval_perplexity.py --model microsoft/Phi-3-mini-4k-instruct --seq-len 2048 --n-sequences 20
++ python scripts/eval_memory_throughput.py --model microsoft/Phi-3-mini-4k-instruct --prompt-lengths 512 2048 8192 --max-new-tokens 128
++ python scripts/eval_niah.py --model microsoft/Phi-3-mini-4k-instruct --context-lengths 1000 4000 8000 --depths 0.1 0.5 0.9
++ python scripts/eval_longbench.py --model microsoft/Phi-3-mini-4k-instruct --task narrativeqa --n-samples 30
++ python scripts/eval_k_granularity_ablation.py --model microsoft/Phi-3-mini-4k-instruct --seq-len 1024
++ echo ALL_DONE
+ALL_DONE

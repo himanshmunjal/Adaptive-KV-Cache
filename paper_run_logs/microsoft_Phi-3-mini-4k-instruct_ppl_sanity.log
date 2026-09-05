@@ -1,0 +1,24 @@
+=== SANITY CHECK MODE: fp16_frac=1.0, int8_frac=0.0 forced. adaptive_nll should track base_nll almost exactly (no quantization is happening). ===
+
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/195 [00:00<?, ?it/s]Loading weights:   1%|          | 1/195 [00:00<00:23,  8.14it/s]Loading weights:   2%|▏         | 4/195 [00:00<00:10, 18.06it/s]Loading weights:   7%|▋         | 14/195 [00:00<00:04, 43.21it/s]Loading weights:  10%|█         | 20/195 [00:00<00:03, 47.54it/s]Loading weights:  13%|█▎        | 26/195 [00:00<00:03, 48.17it/s]Loading weights:  18%|█▊        | 35/195 [00:00<00:03, 42.42it/s]Loading weights:  23%|██▎       | 44/195 [00:01<00:03, 48.88it/s]Loading weights:  27%|██▋       | 53/195 [00:01<00:02, 56.99it/s]Loading weights:  31%|███▏      | 61/195 [00:01<00:02, 51.80it/s]Loading weights:  35%|███▍      | 68/195 [00:01<00:02, 45.96it/s]Loading weights:  39%|███▉      | 77/195 [00:01<00:02, 53.19it/s]Loading weights:  43%|████▎     | 83/195 [00:01<00:02, 51.62it/s]Loading weights:  46%|████▌     | 89/195 [00:01<00:02, 47.62it/s]Loading weights:  51%|█████▏    | 100/195 [00:02<00:01, 49.24it/s]Loading weights:  56%|█████▋    | 110/195 [00:02<00:01, 50.49it/s]Loading weights:  59%|█████▉    | 116/195 [00:02<00:01, 51.92it/s]Loading weights:  63%|██████▎   | 122/195 [00:02<00:01, 53.06it/s]Loading weights:  66%|██████▌   | 128/195 [00:02<00:01, 54.20it/s]Loading weights:  70%|██████▉   | 136/195 [00:02<00:00, 59.35it/s]Loading weights:  73%|███████▎  | 143/195 [00:02<00:00, 58.50it/s]Loading weights:  78%|███████▊  | 152/195 [00:03<00:00, 56.89it/s]Loading weights:  81%|████████  | 158/195 [00:03<00:00, 57.55it/s]Loading weights:  85%|████████▌ | 166/195 [00:03<00:00, 52.35it/s]Loading weights:  90%|█████████ | 176/195 [00:03<00:00, 49.91it/s]Loading weights:  94%|█████████▍| 184/195 [00:03<00:00, 53.60it/s]Loading weights:  98%|█████████▊| 191/195 [00:03<00:00, 56.33it/s]Loading weights: 100%|██████████| 195/195 [00:03<00:00, 52.01it/s]
+Model loaded on device: cuda:0
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (341468 > 4096). Running this sequence through the model will result in indexing errors
+[seq 0] base_nll=1.4749  adaptive_nll=1.4747  compression=1.000
+[seq 1] base_nll=1.8473  adaptive_nll=1.8474  compression=1.000
+[seq 2] base_nll=2.0882  adaptive_nll=2.0882  compression=1.000
+[seq 3] base_nll=1.8873  adaptive_nll=1.8870  compression=1.000
+[seq 4] base_nll=1.5950  adaptive_nll=1.5950  compression=1.000
+
+=== Summary ===
+Baseline (FP16, full cache) perplexity: 5.921
+Adaptive KV cache perplexity:            5.921
+Relative degradation:                    -0.01%
+Mean KV-cache compression ratio:          1.000  (0.0% memory reduction)
+
+Sanity check passed (|diff| = 0.01% <= 1.0%): the harness reproduces the baseline when no quantization is applied. Compression-vs-quality numbers from a normal (non-sanity-check) run can be trusted to reflect the quantization itself.
+
+Saved results to:
+  results/microsoft_Phi-3-mini-4k-instruct_20260905T132057Z.json
+  results/microsoft_Phi-3-mini-4k-instruct_20260905T132057Z.csv

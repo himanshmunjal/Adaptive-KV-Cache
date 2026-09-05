@@ -109,13 +109,22 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if args.model:
+        from datasets import load_dataset
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         tok = AutoTokenizer.from_pretrained(args.model)
         model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=torch.float16,
                                                       device_map="auto")
         model.eval()
-        text = "The quick brown fox jumps over the lazy dog. " * 200
+        # A single repeated sentence keeps every chunk's per-channel min/max
+        # nearly identical to its per-token min/max (there's no real token-to-
+        # token variation for per-channel grouping to exploit), which washes
+        # out the very effect this ablation is meant to isolate and made the
+        # channel-vs-token K-MAE gap look far smaller than it is on real text.
+        # Natural text has the structured per-channel outliers SubKV/KIVI
+        # report, so use a real passage instead.
+        ds = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="test")
+        text = "\n\n".join(ds["text"][:200])
         ids = tok(text, return_tensors="pt")["input_ids"][:, : args.seq_len].to(model.device)
     else:
         model, tok, vocab_size = _tiny_model_and_tokenizer()

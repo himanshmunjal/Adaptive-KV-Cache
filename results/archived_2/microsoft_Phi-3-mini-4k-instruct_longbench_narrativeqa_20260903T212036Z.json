@@ -1,0 +1,201 @@
+{
+  "run_name": "microsoft_Phi-3-mini-4k-instruct_longbench_narrativeqa_20260903T212036Z",
+  "timestamp_utc": "20260903T212036Z",
+  "args": {
+    "model": "microsoft/Phi-3-mini-4k-instruct",
+    "task": "narrativeqa",
+    "n_samples": 30,
+    "max_new_tokens": 64,
+    "importance_mode": "key_diversity",
+    "output_dir": "results",
+    "run_name": null
+  },
+  "per_sample": [
+    {
+      "sample": 0,
+      "base_f1": 0.16216216216216217,
+      "adaptive_f1": 0.16216216216216217,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 1,
+      "base_f1": 0.07692307692307693,
+      "adaptive_f1": 0.08,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 2,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 3,
+      "base_f1": 0.10344827586206895,
+      "adaptive_f1": 0.10344827586206895,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 4,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 5,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 6,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 7,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 8,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 9,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 10,
+      "base_f1": 0.04166666666666667,
+      "adaptive_f1": 0.044444444444444446,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 11,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.09523809523809525,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 12,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 13,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 14,
+      "base_f1": 0.0689655172413793,
+      "adaptive_f1": 0.0689655172413793,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 15,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 16,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 17,
+      "base_f1": 0.04081632653061225,
+      "adaptive_f1": 0.043478260869565216,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 18,
+      "base_f1": 0.06896551724137932,
+      "adaptive_f1": 0.06896551724137932,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 19,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 20,
+      "base_f1": 0.0851063829787234,
+      "adaptive_f1": 0.0851063829787234,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 21,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 22,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 23,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 24,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 25,
+      "base_f1": 0.07142857142857142,
+      "adaptive_f1": 0.07142857142857142,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 26,
+      "base_f1": 0.03571428571428571,
+      "adaptive_f1": 0.03571428571428571,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 27,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 28,
+      "base_f1": 0.0,
+      "adaptive_f1": 0.0,
+      "compression_ratio": 0.5937197029790234
+    },
+    {
+      "sample": 29,
+      "base_f1": 0.07142857142857142,
+      "adaptive_f1": 0.07142857142857142,
+      "compression_ratio": 0.5937197029790234
+    }
+  ],
+  "summary": {
+    "baseline_f1": 0.02755417847258325,
+    "adaptive_f1": 0.031012669486974887,
+    "mean_compression_ratio": 0.5937197029790234,
+    "memory_reduction_pct": 40.628029702097656
+  }
+}

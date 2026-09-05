@@ -1,0 +1,38 @@
+{
+  "run_name": "microsoft_Phi-3-mini-4k-instruct_k_granularity_ablation_20260903T212454Z",
+  "timestamp_utc": "20260903T212454Z",
+  "args": {
+    "model": "microsoft/Phi-3-mini-4k-instruct",
+    "seq_len": 1024,
+    "recent_window": 16,
+    "fp16_frac": 0.2,
+    "int8_frac": 0.3,
+    "realloc_interval": 16,
+    "min_tokens_to_compress": 32,
+    "output_dir": "results",
+    "run_name": null
+  },
+  "results": {
+    "token": {
+      "nll": 0.017551530258163795,
+      "k_mae": 1.1921539306640625,
+      "compression_ratio": 0.5016886393229166,
+      "tier_summary": {
+        "fp16": 7072,
+        "int8": 9632,
+        "int4": 16064
+      }
+    },
+    "channel": {
+      "nll": 0.018632607259591885,
+      "k_mae": 1.1832122802734375,
+      "compression_ratio": 0.5345357259114584,
+      "tier_summary": {
+        "fp16": 7072,
+        "int8": 9632,
+        "int4": 16064
+      }
+    }
+  },
+  "k_mae_reduction_pct": 0.750041597870188
+}

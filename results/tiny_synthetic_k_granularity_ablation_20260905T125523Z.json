@@ -1,0 +1,38 @@
+{
+  "run_name": "tiny_synthetic_k_granularity_ablation_20260905T125523Z",
+  "timestamp_utc": "20260905T125523Z",
+  "args": {
+    "model": null,
+    "seq_len": 256,
+    "recent_window": 16,
+    "fp16_frac": 0.2,
+    "int8_frac": 0.3,
+    "realloc_interval": 16,
+    "min_tokens_to_compress": 32,
+    "output_dir": "results",
+    "run_name": null
+  },
+  "results": {
+    "token": {
+      "nll": 6.940205772250306,
+      "k_mae": 0.2358933500945568,
+      "compression_ratio": 0.60791015625,
+      "tier_summary": {
+        "fp16": 268,
+        "int8": 284,
+        "int4": 472
+      }
+    },
+    "channel": {
+      "nll": 6.940141326305913,
+      "k_mae": 0.23588362336158752,
+      "compression_ratio": 0.604736328125,
+      "tier_summary": {
+        "fp16": 268,
+        "int8": 284,
+        "int4": 472
+      }
+    }
+  },
+  "k_mae_reduction_pct": 0.004123360393748499
+}

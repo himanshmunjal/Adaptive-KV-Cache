@@ -1,0 +1,45 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/195 [00:00<?, ?it/s]Loading weights:   1%|          | 1/195 [00:00<02:09,  1.50it/s]Loading weights:   6%|▌         | 11/195 [00:01<00:14, 12.30it/s]Loading weights:   9%|▊         | 17/195 [00:01<00:12, 14.12it/s]Loading weights:  12%|█▏        | 23/195 [00:01<00:11, 14.45it/s]Loading weights:  15%|█▍        | 29/195 [00:01<00:09, 18.19it/s]Loading weights:  18%|█▊        | 35/195 [00:02<00:09, 17.72it/s]Loading weights:  21%|██        | 41/195 [00:02<00:07, 20.08it/s]Loading weights:  23%|██▎       | 44/195 [00:02<00:07, 19.33it/s]Loading weights:  24%|██▍       | 47/195 [00:02<00:07, 18.99it/s]Loading weights:  27%|██▋       | 52/195 [00:03<00:06, 23.26it/s]Loading weights:  28%|██▊       | 55/195 [00:03<00:08, 17.08it/s]Loading weights:  30%|███       | 59/195 [00:03<00:07, 18.13it/s]Loading weights:  33%|███▎      | 64/195 [00:03<00:05, 22.35it/s]Loading weights:  34%|███▍      | 67/195 [00:03<00:05, 22.39it/s]Loading weights:  36%|███▌      | 70/195 [00:04<00:07, 17.78it/s]Loading weights:  37%|███▋      | 73/195 [00:04<00:07, 15.51it/s]Loading weights:  39%|███▉      | 77/195 [00:04<00:07, 15.90it/s]Loading weights:  41%|████      | 80/195 [00:04<00:06, 16.84it/s]Loading weights:  43%|████▎     | 83/195 [00:04<00:06, 17.47it/s]Loading weights:  45%|████▌     | 88/195 [00:05<00:04, 21.67it/s]Loading weights:  47%|████▋     | 91/195 [00:05<00:06, 16.13it/s]Loading weights:  50%|█████     | 98/195 [00:05<00:04, 22.58it/s]Loading weights:  52%|█████▏    | 101/195 [00:05<00:05, 17.47it/s]Loading weights:  55%|█████▍    | 107/195 [00:06<00:05, 17.42it/s]Loading weights:  58%|█████▊    | 113/195 [00:06<00:04, 18.26it/s]Loading weights:  59%|█████▉    | 116/195 [00:06<00:04, 18.75it/s]Loading weights:  61%|██████    | 119/195 [00:06<00:04, 18.61it/s]Loading weights:  64%|██████▎   | 124/195 [00:06<00:03, 22.69it/s]Loading weights:  65%|██████▌   | 127/195 [00:07<00:02, 23.03it/s]Loading weights:  67%|██████▋   | 131/195 [00:07<00:03, 18.37it/s]Loading weights:  70%|██████▉   | 136/195 [00:07<00:02, 22.51it/s]Loading weights:  71%|███████▏  | 139/195 [00:07<00:02, 21.45it/s]Loading weights:  73%|███████▎  | 142/195 [00:07<00:02, 20.36it/s]Loading weights:  74%|███████▍  | 145/195 [00:08<00:02, 16.70it/s]Loading weights:  76%|███████▋  | 149/195 [00:08<00:02, 18.22it/s]Loading weights:  78%|███████▊  | 152/195 [00:08<00:02, 15.57it/s]Loading weights:  79%|███████▉  | 155/195 [00:08<00:02, 15.58it/s]Loading weights:  83%|████████▎ | 161/195 [00:09<00:02, 15.95it/s]Loading weights:  86%|████████▌ | 167/195 [00:09<00:01, 17.85it/s]Loading weights:  88%|████████▊ | 172/195 [00:09<00:01, 22.24it/s]Loading weights:  90%|████████▉ | 175/195 [00:09<00:00, 21.31it/s]Loading weights:  91%|█████████▏| 178/195 [00:09<00:00, 20.65it/s]Loading weights:  93%|█████████▎| 181/195 [00:09<00:00, 20.68it/s]Loading weights:  94%|█████████▍| 184/195 [00:10<00:00, 14.79it/s]Loading weights:  95%|█████████▌| 186/195 [00:10<00:00, 13.08it/s]Loading weights: 100%|██████████| 195/195 [00:10<00:00, 18.34it/s]
+Model loaded on device: cuda:0
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (35434 > 4096). Running this sequence through the model will result in indexing errors
+[transformers] This is a friendly reminder - the current text generation call has exceeded the model's predefined maximum length (4096). Depending on the model, you may observe exceptions, performance degradation, or nothing at all.
+[1/30] base_f1=0.146 adaptive_f1=0.140 compression=0.594
+[2/30] base_f1=0.178 adaptive_f1=0.178 compression=0.594
+[3/30] base_f1=0.000 adaptive_f1=0.000 compression=0.594
+[4/30] base_f1=0.245 adaptive_f1=0.245 compression=0.594
+[5/30] base_f1=0.000 adaptive_f1=0.000 compression=0.594
+[6/30] base_f1=0.000 adaptive_f1=0.000 compression=0.594
+[7/30] base_f1=0.108 adaptive_f1=0.103 compression=0.594
+[8/30] base_f1=0.000 adaptive_f1=0.000 compression=0.594
+[9/30] base_f1=0.098 adaptive_f1=0.098 compression=0.594
+[10/30] base_f1=0.000 adaptive_f1=0.000 compression=0.594
+[11/30] base_f1=0.000 adaptive_f1=0.000 compression=0.594
+[12/30] base_f1=0.039 adaptive_f1=0.078 compression=0.594
+[13/30] base_f1=0.000 adaptive_f1=0.000 compression=0.594
+[14/30] base_f1=0.118 adaptive_f1=0.118 compression=0.594
+[15/30] base_f1=0.062 adaptive_f1=0.062 compression=0.594
+[16/30] base_f1=0.312 adaptive_f1=0.279 compression=0.594
+[17/30] base_f1=0.145 adaptive_f1=0.145 compression=0.594
+[18/30] base_f1=0.000 adaptive_f1=0.000 compression=0.594
+[19/30] base_f1=0.049 adaptive_f1=0.049 compression=0.594
+[20/30] base_f1=0.000 adaptive_f1=0.000 compression=0.594
+[21/30] base_f1=0.095 adaptive_f1=0.095 compression=0.594
+[22/30] base_f1=0.056 adaptive_f1=0.056 compression=0.594
+[23/30] base_f1=0.000 adaptive_f1=0.000 compression=0.594
+[24/30] base_f1=0.000 adaptive_f1=0.000 compression=0.594
+[25/30] base_f1=0.222 adaptive_f1=0.222 compression=0.594
+[26/30] base_f1=0.069 adaptive_f1=0.061 compression=0.594
+[27/30] base_f1=0.196 adaptive_f1=0.182 compression=0.594
+[28/30] base_f1=0.054 adaptive_f1=0.054 compression=0.594
+[29/30] base_f1=0.095 adaptive_f1=0.095 compression=0.594
+[30/30] base_f1=0.050 adaptive_f1=0.051 compression=0.594
+
+=== Summary ===
+Task: narrativeqa  (n=30)
+Baseline F1:  0.0779
+Adaptive F1:  0.0770
+Mean compression ratio: 0.594 (40.6% memory reduction)
+
+Saved results to:
+  results/microsoft_Phi-3-mini-4k-instruct_longbench_narrativeqa_20260905T135752Z.json
+  results/microsoft_Phi-3-mini-4k-instruct_longbench_narrativeqa_20260905T135752Z.csv
