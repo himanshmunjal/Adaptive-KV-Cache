@@ -1,0 +1,25 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/195 [00:00<?, ?it/s]Loading weights:   1%|          | 1/195 [00:00<02:20,  1.38it/s]Loading weights:   5%|▌         | 10/195 [00:01<00:15, 12.05it/s]Loading weights:   6%|▌         | 12/195 [00:01<00:16, 11.25it/s]Loading weights:   9%|▊         | 17/195 [00:01<00:12, 14.02it/s]Loading weights:  11%|█▏        | 22/195 [00:01<00:09, 18.02it/s]Loading weights:  13%|█▎        | 25/195 [00:01<00:10, 15.61it/s]Loading weights:  15%|█▍        | 29/195 [00:02<00:09, 17.27it/s]Loading weights:  17%|█▋        | 34/195 [00:02<00:07, 20.71it/s]Loading weights:  19%|█▉        | 37/195 [00:02<00:07, 20.02it/s]Loading weights:  21%|██        | 40/195 [00:02<00:08, 18.90it/s]Loading weights:  22%|██▏       | 43/195 [00:02<00:07, 20.64it/s]Loading weights:  24%|██▎       | 46/195 [00:02<00:07, 19.71it/s]Loading weights:  25%|██▌       | 49/195 [00:03<00:10, 14.45it/s]Loading weights:  27%|██▋       | 53/195 [00:03<00:07, 18.27it/s]Loading weights:  29%|██▊       | 56/195 [00:03<00:06, 20.01it/s]Loading weights:  30%|███       | 59/195 [00:03<00:07, 17.80it/s]Loading weights:  33%|███▎      | 64/195 [00:03<00:06, 21.73it/s]Loading weights:  34%|███▍      | 67/195 [00:04<00:08, 15.35it/s]Loading weights:  38%|███▊      | 74/195 [00:04<00:06, 19.64it/s]Loading weights:  39%|███▉      | 77/195 [00:04<00:06, 17.99it/s]Loading weights:  42%|████▏     | 82/195 [00:04<00:05, 22.52it/s]Loading weights:  44%|████▎     | 85/195 [00:04<00:04, 22.23it/s]Loading weights:  45%|████▌     | 88/195 [00:05<00:04, 22.70it/s]Loading weights:  47%|████▋     | 91/195 [00:05<00:04, 23.30it/s]Loading weights:  48%|████▊     | 94/195 [00:05<00:04, 23.15it/s]Loading weights:  50%|████▉     | 97/195 [00:05<00:04, 19.90it/s]Loading weights:  52%|█████▏    | 101/195 [00:05<00:05, 16.58it/s]Loading weights:  53%|█████▎    | 104/195 [00:05<00:04, 18.55it/s]Loading weights:  55%|█████▍    | 107/195 [00:06<00:04, 17.81it/s]Loading weights:  56%|█████▋    | 110/195 [00:06<00:04, 19.48it/s]Loading weights:  58%|█████▊    | 113/195 [00:06<00:04, 19.09it/s]Loading weights:  59%|█████▉    | 116/195 [00:06<00:03, 21.11it/s]Loading weights:  61%|██████    | 119/195 [00:06<00:04, 17.09it/s]Loading weights:  64%|██████▍   | 125/195 [00:06<00:03, 20.48it/s]Loading weights:  67%|██████▋   | 131/195 [00:07<00:03, 19.81it/s]Loading weights:  70%|███████   | 137/195 [00:07<00:03, 19.02it/s]Loading weights:  73%|███████▎  | 143/195 [00:07<00:02, 18.92it/s]Loading weights:  76%|███████▋  | 149/195 [00:08<00:02, 22.96it/s]Loading weights:  78%|███████▊  | 152/195 [00:08<00:02, 21.27it/s]Loading weights:  79%|███████▉  | 155/195 [00:08<00:02, 18.08it/s]Loading weights:  83%|████████▎ | 161/195 [00:08<00:01, 18.88it/s]Loading weights:  86%|████████▌ | 167/195 [00:08<00:01, 23.10it/s]Loading weights:  87%|████████▋ | 170/195 [00:09<00:01, 19.25it/s]Loading weights:  89%|████████▊ | 173/195 [00:09<00:01, 15.59it/s]Loading weights:  92%|█████████▏| 179/195 [00:09<00:00, 21.50it/s]Loading weights:  93%|█████████▎| 182/195 [00:09<00:00, 18.30it/s]Loading weights:  95%|█████████▍| 185/195 [00:10<00:00, 15.92it/s]Loading weights:  98%|█████████▊| 191/195 [00:10<00:00, 20.85it/s]Loading weights: 100%|██████████| 195/195 [00:10<00:00, 18.86it/s]
+Model loaded on device: cuda:0
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (341468 > 4096). Running this sequence through the model will result in indexing errors
+[seq 0] base_nll=1.4750  adaptive_nll=1.4785  compression=0.606
+[seq 1] base_nll=1.8475  adaptive_nll=1.8504  compression=0.606
+[seq 2] base_nll=2.0879  adaptive_nll=2.0866  compression=0.606
+[seq 3] base_nll=1.8871  adaptive_nll=1.8888  compression=0.606
+[seq 4] base_nll=1.5951  adaptive_nll=1.5927  compression=0.606
+[seq 5] base_nll=1.6892  adaptive_nll=1.6945  compression=0.606
+[seq 6] base_nll=1.3976  adaptive_nll=1.3991  compression=0.606
+[seq 7] base_nll=1.2592  adaptive_nll=1.2558  compression=0.606
+[seq 8] base_nll=1.6775  adaptive_nll=1.6770  compression=0.606
+[seq 9] base_nll=1.7833  adaptive_nll=1.7833  compression=0.606
+
+=== Summary ===
+Baseline (FP16, full cache) perplexity: 5.312
+Adaptive KV cache perplexity:            5.316
+Relative degradation:                    0.07%
+Mean KV-cache compression ratio:          0.606  (39.4% memory reduction)
+
+Saved results to:
+  results/microsoft_Phi-3-mini-4k-instruct_ppl_mode_attn_value.json
+  results/microsoft_Phi-3-mini-4k-instruct_ppl_mode_attn_value.csv

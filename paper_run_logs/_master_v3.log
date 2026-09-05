@@ -40,3 +40,25 @@
 + python scripts/eval_perplexity.py --model microsoft/Phi-3-mini-4k-instruct --seq-len 2048 --n-sequences 10 --importance-mode attn --run-name microsoft_Phi-3-mini-4k-instruct_ppl_mode_attn
 + for MODE in attn attn_value
 + python scripts/eval_perplexity.py --model microsoft/Phi-3-mini-4k-instruct --seq-len 2048 --n-sequences 10 --importance-mode attn_value --run-name microsoft_Phi-3-mini-4k-instruct_ppl_mode_attn_value
++ for FRACS in "0.6 0.3" "0.3 0.3" "0.15 0.3" "0.1 0.15"
++ set -- 0.6 0.3
++ FP16=0.6
++ INT8=0.3
++ python scripts/eval_perplexity.py --model Qwen/Qwen2.5-1.5B-Instruct --seq-len 2048 --n-sequences 10 --fp16-frac 0.6 --int8-frac 0.3 --run-name Qwen_Qwen2.5-1.5B-Instruct_pareto_fp16_0.6_int8_0.3
++ for FRACS in "0.6 0.3" "0.3 0.3" "0.15 0.3" "0.1 0.15"
++ set -- 0.3 0.3
++ FP16=0.3
++ INT8=0.3
++ python scripts/eval_perplexity.py --model Qwen/Qwen2.5-1.5B-Instruct --seq-len 2048 --n-sequences 10 --fp16-frac 0.3 --int8-frac 0.3 --run-name Qwen_Qwen2.5-1.5B-Instruct_pareto_fp16_0.3_int8_0.3
++ for FRACS in "0.6 0.3" "0.3 0.3" "0.15 0.3" "0.1 0.15"
++ set -- 0.15 0.3
++ FP16=0.15
++ INT8=0.3
++ python scripts/eval_perplexity.py --model Qwen/Qwen2.5-1.5B-Instruct --seq-len 2048 --n-sequences 10 --fp16-frac 0.15 --int8-frac 0.3 --run-name Qwen_Qwen2.5-1.5B-Instruct_pareto_fp16_0.15_int8_0.3
++ for FRACS in "0.6 0.3" "0.3 0.3" "0.15 0.3" "0.1 0.15"
++ set -- 0.1 0.15
++ FP16=0.1
++ INT8=0.15
++ python scripts/eval_perplexity.py --model Qwen/Qwen2.5-1.5B-Instruct --seq-len 2048 --n-sequences 10 --fp16-frac 0.1 --int8-frac 0.15 --run-name Qwen_Qwen2.5-1.5B-Instruct_pareto_fp16_0.1_int8_0.15
++ echo ALL_DONE_V3
+ALL_DONE_V3

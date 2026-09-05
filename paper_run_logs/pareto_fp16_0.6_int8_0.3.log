@@ -1,0 +1,25 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights:   0%|          | 1/338 [00:01<08:12,  1.46s/it]Loading weights:  15%|█▌        | 52/338 [00:01<00:06, 45.56it/s]Loading weights:  23%|██▎       | 79/338 [00:01<00:04, 52.23it/s]Loading weights:  29%|██▊       | 97/338 [00:02<00:04, 54.92it/s]Loading weights:  33%|███▎      | 111/338 [00:02<00:04, 52.52it/s]Loading weights:  36%|███▋      | 123/338 [00:02<00:03, 56.01it/s]Loading weights:  39%|███▉      | 133/338 [00:02<00:03, 60.66it/s]Loading weights:  42%|████▏     | 142/338 [00:03<00:03, 55.51it/s]Loading weights:  44%|████▍     | 150/338 [00:03<00:03, 55.64it/s]Loading weights:  47%|████▋     | 159/338 [00:03<00:03, 55.18it/s]Loading weights:  49%|████▉     | 166/338 [00:03<00:03, 49.41it/s]Loading weights:  54%|█████▍    | 183/338 [00:03<00:02, 64.26it/s]Loading weights:  57%|█████▋    | 191/338 [00:03<00:02, 65.73it/s]Loading weights:  60%|██████    | 204/338 [00:03<00:01, 74.26it/s]Loading weights:  63%|██████▎   | 212/338 [00:04<00:01, 64.25it/s]Loading weights:  65%|██████▍   | 219/338 [00:04<00:01, 62.47it/s]Loading weights:  68%|██████▊   | 229/338 [00:04<00:01, 66.38it/s]Loading weights:  70%|██████▉   | 236/338 [00:04<00:01, 66.01it/s]Loading weights:  72%|███████▏  | 243/338 [00:04<00:01, 53.08it/s]Loading weights:  74%|███████▎  | 249/338 [00:04<00:01, 47.57it/s]Loading weights:  75%|███████▌  | 255/338 [00:05<00:01, 46.74it/s]Loading weights:  79%|███████▉  | 268/338 [00:05<00:01, 56.86it/s]Loading weights:  83%|████████▎ | 279/338 [00:05<00:00, 64.50it/s]Loading weights:  86%|████████▌ | 291/338 [00:05<00:00, 62.24it/s]Loading weights:  88%|████████▊ | 298/338 [00:05<00:00, 58.42it/s]Loading weights:  90%|████████▉ | 304/338 [00:05<00:00, 47.29it/s]Loading weights:  93%|█████████▎| 315/338 [00:06<00:00, 57.41it/s]Loading weights:  97%|█████████▋| 327/338 [00:06<00:00, 58.79it/s]Loading weights: 100%|██████████| 338/338 [00:06<00:00, 53.94it/s]
+Model loaded on device: cuda:0
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (299078 > 131072). Running this sequence through the model will result in indexing errors
+[seq 0] base_nll=1.9904  adaptive_nll=1.9905  compression=0.801
+[seq 1] base_nll=2.4047  adaptive_nll=2.4051  compression=0.801
+[seq 2] base_nll=2.6351  adaptive_nll=2.6361  compression=0.801
+[seq 3] base_nll=2.4666  adaptive_nll=2.4669  compression=0.801
+[seq 4] base_nll=2.1894  adaptive_nll=2.1891  compression=0.801
+[seq 5] base_nll=1.7590  adaptive_nll=1.7591  compression=0.801
+[seq 6] base_nll=1.5392  adaptive_nll=1.5387  compression=0.801
+[seq 7] base_nll=2.0903  adaptive_nll=2.0898  compression=0.801
+[seq 8] base_nll=2.2650  adaptive_nll=2.2654  compression=0.801
+[seq 9] base_nll=2.3887  adaptive_nll=2.3890  compression=0.801
+
+=== Summary ===
+Baseline (FP16, full cache) perplexity: 8.783
+Adaptive KV cache perplexity:            8.784
+Relative degradation:                    0.01%
+Mean KV-cache compression ratio:          0.801  (19.9% memory reduction)
+
+Saved results to:
+  results/Qwen_Qwen2.5-1.5B-Instruct_pareto_fp16_0.6_int8_0.3.json
+  results/Qwen_Qwen2.5-1.5B-Instruct_pareto_fp16_0.6_int8_0.3.csv

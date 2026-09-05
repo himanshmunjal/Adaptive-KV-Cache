@@ -545,16 +545,35 @@ Phi-3-mini-4k-instruct (§5).*
 
 ### 4.6 Importance-mode ablation
 
-@@TABLE_MODE_ABLATION_MD@@
+| Model | Importance mode | Degradation | Mem. reduction |
+|---|---|---|---|
+| Qwen2.5-1.5B-Instruct | attn (H2O-style) | N/A† | 39.6% |
+| Qwen2.5-1.5B-Instruct | attn_value (VATP) | N/A† | 39.6% |
+| Qwen2.5-1.5B-Instruct | key_diversity (default) | 0.16% | 39.6% |
+| Phi-3-mini-4k-instruct | attn (H2O-style) | 0.18% | 39.4% |
+| Phi-3-mini-4k-instruct | attn_value (VATP) | 0.07% | 39.4% |
+| Phi-3-mini-4k-instruct | key_diversity (default) | 0.02% | 39.4% |
+
+†Both `attn` and `attn_value` require `attn_implementation="eager"` (§2.3); at FP16,
+eager attention overflows for this model regardless of the KV cache — we confirmed a
+plain FP16+eager forward pass with *no* adaptive cache involved (`DynamicCache` baseline
+only) also returns `NaN` logits for Qwen2.5-1.5B-Instruct, while the identical input at
+BF16 gives a finite loss. This is a numerical-precision property of this checkpoint
+under eager attention, unrelated to the adaptive cache; see §5.
 
 ### 4.7 Compression–quality trade-off
 
-@@TABLE_PARETO_MD@@
+| f16/f8 | Mem. reduction | PPL degradation |
+|---|---|---|
+| 0.60/0.30 | 19.9% | 0.01% |
+| 0.30/0.30 | 39.6% | 0.16% |
+| 0.15/0.30 | 49.4% | 0.11% |
+| 0.10/0.15 | 55.9% | 0.20% |
 
 ![Compression-quality trade-off](figures/pareto_curve.png)
 
 *Figure 9 — perplexity degradation vs. KV-cache memory reduction, Qwen2.5-1.5B-Instruct,
-sweeping $(f_{16}, f_8)$ from conservative to aggressive. @@PARETO_CAPTION_MD@@*
+sweeping $(f_{16}, f_8)$ from conservative to aggressive. Degradation stays low over most of the sweep; degradation stays under 1% until the most aggressive setting tested.*
 
 ## 5. Discussion
 
@@ -619,9 +638,36 @@ fused kernel that dequantizes inline during the attention matmul — rather than
 materializing a full FP16 tensor first — would be needed to bring per-token decode cost
 down further.
 
-@@DISCUSSION_MODE_ABLATION_MD@@
+### Importance-mode ablation
 
-@@DISCUSSION_PARETO_MD@@
+The table above (§4.6) compares the three importance signals from §2.3 at matched tier
+fractions. For Phi-3-mini-4k-instruct, degradation is 0.18% (attn), 0.07% (attn_value),
+and 0.02% (key_diversity) — all three modes stay comfortably within the sub-1% budget
+at matched compression, so the choice of importance signal is not perplexity-critical
+for this model. For Qwen2.5-1.5B-Instruct we could not obtain a comparable
+`attn`/`attn_value` number: both modes require eager attention (§2.3), and we found that
+FP16 eager attention overflows for this specific checkpoint regardless of the KV cache
+used — a plain FP16 `DynamicCache` forward pass with eager attention and no adaptive
+cache involved returns `NaN` logits on this model, while the identical input at BF16
+returns a finite loss (0.066 on a 512-token check). This is a numerical-precision
+property of the Qwen2.5-1.5B-Instruct checkpoint under eager attention that we did not
+set out to characterize and do not attempt to fix here; it does not affect any other
+result in this paper, since every other evaluation uses either `key_diversity`
+(attention-free, no eager attention required) or the FP16 baseline under its default
+(non-eager) attention implementation. Taken together with Phi-3's result, the
+attention-free `key_diversity` default remains the practical choice: it is the only
+mode that ran successfully on both models without dtype changes, and it does not cost
+measurable quality where a comparison was possible.
+
+### Compression–quality trade-off
+
+The table and figure above (§4.7) sweep $(f_{16}, f_8)$ for Qwen2.5-1.5B-Instruct.
+Degradation stays low over most of the sweep; degradation stays under 1% until the most aggressive setting tested. This indicates the default operating point used
+throughout this paper ($f_{16}=f_8=0.30$, 39.6% reduction) is not
+close to a cliff edge — there is headroom to push compression further before quality
+risk materializes on this model, though §6's caveat about single-model sweeps applies:
+we have not verified this same headroom exists for Phi-3-mini-4k-instruct or other
+architectures.
 
 ## 6. Limitations and Future Work
 

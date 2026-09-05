@@ -679,17 +679,56 @@ Phi-3-mini-4k-instruct & 1.27501 & 1.27298 & +0.2\% & 1.442 & 1.446 \\
 
 \subsection{Importance-mode ablation}
 \label{sec:mode-ablation-results}
-@@TABLE_MODE_ABLATION@@
+\begin{table}[t]
+\centering
+\caption{Importance-mode ablation: PPL degradation by importance signal.}
+\label{tab:mode-ablation}
+\begin{tabular}{llrr}
+\toprule
+Model & Importance mode & Degr.\ & Mem.\ red.\ \\
+\midrule
+Qwen2.5-1.5B-Instruct & attn (H2O-style) & N/A$^\dagger$ & 39.6\% \\
+Qwen2.5-1.5B-Instruct & attn\_value (VATP) & N/A$^\dagger$ & 39.6\% \\
+Qwen2.5-1.5B-Instruct & key\_diversity (default) & 0.16\% & 39.6\% \\
+Phi-3-mini-4k-instruct & attn (H2O-style) & 0.18\% & 39.4\% \\
+Phi-3-mini-4k-instruct & attn\_value (VATP) & 0.07\% & 39.4\% \\
+Phi-3-mini-4k-instruct & key\_diversity (default) & 0.02\% & 39.4\% \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+{\footnotesize $^\dagger$Both \texttt{attn} and \texttt{attn\_value} require
+\texttt{attn\_implementation="eager"} (Section~\ref{sec:importance}); at FP16, eager
+attention overflows for this model regardless of the KV cache -- we confirmed a plain
+FP16+eager forward pass with \emph{no} adaptive cache involved (\texttt{DynamicCache}
+baseline only) also returns \texttt{NaN} logits for Qwen2.5-1.5B-Instruct, while the
+identical input at BF16 gives a finite loss. This is a numerical-precision property of
+this checkpoint under eager attention, unrelated to the adaptive cache; see
+Section~\ref{sec:discussion}.}
+\end{table}
 
 \subsection{Compression--quality trade-off}
 \label{sec:pareto-results}
-@@TABLE_PARETO@@
+\begin{table}[t]
+\centering
+\caption{Compression--quality trade-off, Qwen2.5-1.5B-Instruct (varying $f_{16}/f_8$).}
+\label{tab:pareto}
+\begin{tabular}{lrr}
+\toprule
+$f_{16}/f_8$ & Mem.\ reduction & PPL degr.\ \\
+\midrule
+0.60/0.30 & 19.9\% & 0.01\% \\
+0.30/0.30 & 39.6\% & 0.16\% \\
+0.15/0.30 & 49.4\% & 0.11\% \\
+0.10/0.15 & 55.9\% & 0.20\% \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.85\linewidth]{figures/pareto_curve.png}
 \caption{Perplexity degradation vs.\ KV-cache memory reduction, Qwen2.5-1.5B-Instruct,
-sweeping $(f_{16}, f_8)$ from conservative to aggressive. @@PARETO_CAPTION@@}
+sweeping $(f_{16}, f_8)$ from conservative to aggressive. Degradation stays low over most of the sweep; degradation stays under 1% until the most aggressive setting tested.}
 \label{fig:pareto}
 \end{figure}
 
@@ -759,9 +798,35 @@ PyTorch is still not free, and a fused kernel that dequantizes inline during the
 matmul -- rather than materializing a full FP16 tensor first -- would be needed to bring
 per-token decode cost down further.
 
-@@DISCUSSION_MODE_ABLATION@@
+\subsection{Importance-mode ablation}
+Table~\ref{tab:mode-ablation} compares the three importance signals from
+Section~\ref{sec:importance} at matched tier fractions. For Phi-3-mini-4k-instruct,
+degradation is 0.18\% (attn), 0.07\% (attn\_value), and 0.02\% (key\_diversity) --
+all three modes stay comfortably within the sub-1\% budget at matched compression, so
+the choice of importance signal is not perplexity-critical for this model. For
+Qwen2.5-1.5B-Instruct we could not obtain a comparable \texttt{attn}/\texttt{attn\_value}
+number: both modes require eager attention (Section~\ref{sec:importance}), and we found
+that FP16 eager attention overflows for this specific checkpoint regardless of the KV
+cache used -- a plain FP16 \texttt{DynamicCache} forward pass with eager attention and no
+adaptive cache involved returns \texttt{NaN} logits on this model, while the identical
+input at BF16 returns a finite loss (0.066 on a 512-token check). This is a
+numerical-precision property of the Qwen2.5-1.5B-Instruct checkpoint under eager
+attention that we did not set out to characterize and do not attempt to fix here; it
+does not affect any other result in this paper, since every other evaluation uses either
+\texttt{key\_diversity} (attention-free, no eager attention required) or the FP16
+baseline under its default (non-eager) attention implementation. Taken together with
+Phi-3's result, the attention-free \texttt{key\_diversity} default remains the practical
+choice: it is the only mode that ran successfully on both models without dtype changes,
+and it does not cost measurable quality where a comparison was possible.
 
-@@DISCUSSION_PARETO@@
+\subsection{Compression--quality trade-off}
+Table~\ref{tab:pareto} and Figure~\ref{fig:pareto} sweep $(f_{16}, f_8)$ for
+Qwen2.5-1.5B-Instruct. Degradation stays low over most of the sweep; degradation stays under 1% until the most aggressive setting tested. This indicates the default operating point used
+throughout this paper ($f_{16}{=}f_8{=}0.30$, 39.6\%
+reduction) is not close to a cliff edge -- there is headroom to push compression further
+before quality risk materializes on this model, though Section~\ref{sec:limitations}'s
+caveat about single-model sweeps applies: we have not verified this same headroom exists
+for Phi-3-mini-4k-instruct or other architectures.
 
 \section{Limitations and Future Work}
 \label{sec:limitations}
