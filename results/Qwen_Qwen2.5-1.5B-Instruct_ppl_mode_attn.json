@@ -1,0 +1,85 @@
+{
+  "run_name": "Qwen_Qwen2.5-1.5B-Instruct_ppl_mode_attn",
+  "timestamp_utc": "20260905T150758Z",
+  "args": {
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "seq_len": 2048,
+    "n_sequences": 10,
+    "importance_mode": "attn",
+    "recent_window": 64,
+    "fp16_frac": 0.3,
+    "int8_frac": 0.3,
+    "output_dir": "results",
+    "run_name": "Qwen_Qwen2.5-1.5B-Instruct_ppl_mode_attn",
+    "sanity_check": false
+  },
+  "per_sequence": [
+    {
+      "sequence": 0,
+      "base_nll": NaN,
+      "adaptive_nll": NaN,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 1,
+      "base_nll": NaN,
+      "adaptive_nll": NaN,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 2,
+      "base_nll": NaN,
+      "adaptive_nll": NaN,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 3,
+      "base_nll": NaN,
+      "adaptive_nll": NaN,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 4,
+      "base_nll": NaN,
+      "adaptive_nll": NaN,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 5,
+      "base_nll": NaN,
+      "adaptive_nll": NaN,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 6,
+      "base_nll": NaN,
+      "adaptive_nll": NaN,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 7,
+      "base_nll": NaN,
+      "adaptive_nll": NaN,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 8,
+      "base_nll": NaN,
+      "adaptive_nll": NaN,
+      "compression_ratio": 0.6039199829101562
+    },
+    {
+      "sequence": 9,
+      "base_nll": NaN,
+      "adaptive_nll": NaN,
+      "compression_ratio": 0.6039199829101562
+    }
+  ],
+  "summary": {
+    "baseline_perplexity": NaN,
+    "adaptive_perplexity": NaN,
+    "relative_degradation_pct": NaN,
+    "mean_compression_ratio": 0.6039199829101562,
+    "memory_reduction_pct": 39.608001708984375
+  }
+}

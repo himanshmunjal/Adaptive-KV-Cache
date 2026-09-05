@@ -1,0 +1,85 @@
+{
+  "run_name": "microsoft_Phi-3-mini-4k-instruct_ppl_mode_attn",
+  "timestamp_utc": "20260905T151257Z",
+  "args": {
+    "model": "microsoft/Phi-3-mini-4k-instruct",
+    "seq_len": 2048,
+    "n_sequences": 10,
+    "importance_mode": "attn",
+    "recent_window": 64,
+    "fp16_frac": 0.3,
+    "int8_frac": 0.3,
+    "output_dir": "results",
+    "run_name": "microsoft_Phi-3-mini-4k-instruct_ppl_mode_attn",
+    "sanity_check": false
+  },
+  "per_sequence": [
+    {
+      "sequence": 0,
+      "base_nll": 1.4750263690948486,
+      "adaptive_nll": 1.476390754763068,
+      "compression_ratio": 0.605682373046875
+    },
+    {
+      "sequence": 1,
+      "base_nll": 1.8474842309951782,
+      "adaptive_nll": 1.8511846604787494,
+      "compression_ratio": 0.605682373046875
+    },
+    {
+      "sequence": 2,
+      "base_nll": 2.0879311561584473,
+      "adaptive_nll": 2.090559355153884,
+      "compression_ratio": 0.605682373046875
+    },
+    {
+      "sequence": 3,
+      "base_nll": 1.8871259689331055,
+      "adaptive_nll": 1.8877320468978993,
+      "compression_ratio": 0.605682373046875
+    },
+    {
+      "sequence": 4,
+      "base_nll": 1.5950571298599243,
+      "adaptive_nll": 1.5933225451880801,
+      "compression_ratio": 0.605682373046875
+    },
+    {
+      "sequence": 5,
+      "base_nll": 1.6891865730285645,
+      "adaptive_nll": 1.688629702002931,
+      "compression_ratio": 0.605682373046875
+    },
+    {
+      "sequence": 6,
+      "base_nll": 1.397557258605957,
+      "adaptive_nll": 1.4032043844650708,
+      "compression_ratio": 0.605682373046875
+    },
+    {
+      "sequence": 7,
+      "base_nll": 1.2592453956604004,
+      "adaptive_nll": 1.2614420493404983,
+      "compression_ratio": 0.605682373046875
+    },
+    {
+      "sequence": 8,
+      "base_nll": 1.677538275718689,
+      "adaptive_nll": 1.6799432095749878,
+      "compression_ratio": 0.605682373046875
+    },
+    {
+      "sequence": 9,
+      "base_nll": 1.7832707166671753,
+      "adaptive_nll": 1.7846238397655105,
+      "compression_ratio": 0.605682373046875
+    }
+  ],
+  "summary": {
+    "baseline_perplexity": 5.311861333633417,
+    "adaptive_perplexity": 5.321223482163952,
+    "relative_degradation_pct": 0.17624986690176758,
+    "mean_compression_ratio": 0.605682373046875,
+    "memory_reduction_pct": 39.4317626953125
+  }
+}

@@ -1,0 +1,25 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights:   0%|          | 1/338 [00:00<01:02,  5.39it/s]Loading weights:  33%|███▎      | 111/338 [00:00<00:00, 448.99it/s]Loading weights:  54%|█████▍    | 184/338 [00:00<00:00, 546.39it/s]Loading weights:  79%|███████▉  | 267/338 [00:00<00:00, 627.99it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 567.76it/s]
+Model loaded on device: cuda:0
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (299078 > 131072). Running this sequence through the model will result in indexing errors
+[seq 0] base_nll=nan  adaptive_nll=nan  compression=0.604
+[seq 1] base_nll=nan  adaptive_nll=nan  compression=0.604
+[seq 2] base_nll=nan  adaptive_nll=nan  compression=0.604
+[seq 3] base_nll=nan  adaptive_nll=nan  compression=0.604
+[seq 4] base_nll=nan  adaptive_nll=nan  compression=0.604
+[seq 5] base_nll=nan  adaptive_nll=nan  compression=0.604
+[seq 6] base_nll=nan  adaptive_nll=nan  compression=0.604
+[seq 7] base_nll=nan  adaptive_nll=nan  compression=0.604
+[seq 8] base_nll=nan  adaptive_nll=nan  compression=0.604
+[seq 9] base_nll=nan  adaptive_nll=nan  compression=0.604
+
+=== Summary ===
+Baseline (FP16, full cache) perplexity: nan
+Adaptive KV cache perplexity:            nan
+Relative degradation:                    nan%
+Mean KV-cache compression ratio:          0.604  (39.6% memory reduction)
+
+Saved results to:
+  results/Qwen_Qwen2.5-1.5B-Instruct_ppl_mode_attn_value.json
+  results/Qwen_Qwen2.5-1.5B-Instruct_ppl_mode_attn_value.csv

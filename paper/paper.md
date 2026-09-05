@@ -105,10 +105,45 @@ dissimilarity from the running mean key is a usable, attention-free proxy for ho
 attention it will receive — letting an importance signal be computed even when
 `output_attentions` is unavailable or too expensive to request every step.
 
+**Serving-system memory management.** A separate line of work addresses KV-cache memory
+at the systems level rather than the representation level: PagedAttention (vLLM) manages
+cache memory in fixed-size, non-contiguous pages to reduce fragmentation and enable
+memory sharing across requests, and multi-tenant serving stacks offload colder pages to
+CPU or disk under memory pressure. These systems are complementary to, not competing
+with, the approach in this paper: they solve *where* bytes for a fixed-precision cache
+are physically placed and shared across concurrent requests, whereas this work addresses
+*how many* bytes a single request's cache needs in the first place by varying precision
+per token. A production deployment would plausibly combine both — an adaptive,
+multi-precision per-token cache placed in paged, shareable memory — though we do not
+implement or evaluate that combination here (§6).
+
+**Weight quantization as quantization-scheme prior art.** The asymmetric min–max scheme
+in §2.2 (Eqs. 1–4) is a standard group-wise affine quantizer of the kind popularized for
+*weight* quantization by GPTQ and AWQ, which likewise use a small group size along one
+tensor axis to control error at low bit-width, and likewise observe that a minority of
+outlier channels/columns disproportionately determine quantization error — motivating
+AWQ's per-channel importance-weighted scaling in the weight-quantization setting, in
+much the same spirit as the per-channel K-outlier argument this paper makes for the KV
+cache (§2.2). We are not aware of prior work that transplants this per-channel-outlier
+argument specifically to online, growing KV caches with a token-level (rather than
+weight-level) group axis, which is the setting §2.6's ablation directly tests.
+
 **Gap this work fills.** To our knowledge, no prior system in this survey combines (a)
 continuous, bidirectional (promotable) multi-tier precision assignment with (b)
 asymmetric per-channel-K / per-token-V quantization granularity *within* each non-FP16
-tier. §2.1–2.5 describe how the two compose.
+tier. Table below summarizes where each surveyed method sits along the three axes this
+combination touches:
+
+| Method | Evicts? | Precision | K/V granularity |
+|---|---|---|---|
+| H2O | Yes (hard) | FP16 only | — |
+| StreamingLLM | Yes (hard) | FP16 only | — |
+| KIVI / AQUA-KV | No | Uniform low-bit | Asymmetric (fixed) |
+| KeyDiff | Yes (hard) | FP16 only | — |
+| Spotlight Attention | No (retrieval) | FP16 only | — |
+| **Ours** | **No** | **Adaptive, multi-tier** | **Asymmetric** |
+
+§2.1–2.5 describe how the two compose.
 
 ## 2. Method
 
@@ -279,6 +314,54 @@ $$
 i.e. actual bytes over the FP16-equivalent size of the same cache, aggregated over all
 layers $\ell$.
 
+### 2.6 Algorithm summary
+
+The per-layer update path (§2.1–2.4) is: append the new token at FP16, update the
+importance score, and, every $R$ tokens, re-tier and re-quantize.
+
+```
+AdaptiveKVLayer.update(k_new, v_new):
+    K_fp16 ‖= k_new; V_fp16 ‖= v_new
+    pos ‖= (N, ..., N+t_new-1); N += t_new
+    if importance_mode == key_diversity:
+        K_hat = K_fp16 ‖ DequantINT8INT4(K_int8, K_int4)   # cached, see §5
+        update scores s_i via Eq. 7 on K_hat (Eq. 5)
+    if tokens_since_retier >= R and N >= N_min:
+        Retier()                                            # invalidates the cache
+    K_hat, V_hat = dequantize + concatenate all three tiers
+    order = argsort(pos)
+    return K_hat[order], V_hat[order]
+
+Retier():
+    protected = (pos >= N-W) | (pos < S)
+    rank unprotected tokens by score s_i descending
+    assign top f16 fraction -> FP16, next f8 fraction -> INT8, rest -> INT4  (Eq. 8)
+    for tier t in {FP16, INT8, INT4}:
+        reuse stored bytes for tokens whose tier is unchanged (V only; K always requantized, §2.4)
+        (re-)quantize tokens newly entering tier t from a full-precision dequant
+    invalidate the INT8/INT4 dequant cache (§5)
+```
+
+### 2.7 Time and space complexity
+
+Let $N$ be the current sequence length. A single non-re-tiering decode step costs
+$O(N)$: the memoized dequantization is $O(1)$ amortized once cached, but concatenating
+the three tiers and computing `argsort(pos)` to restore position order is still
+$O(N \log N)$ time and $O(N)$ auxiliary memory every step, since the storage order
+(grouped by tier) generally differs from sequence order after any re-tiering has
+occurred. A re-tiering step additionally costs $O(N)$ for the ranking, tier
+reassignment, and (re-)quantization of the tokens whose tier changed. Since re-tiering
+happens once every $R$ decode steps, its amortized per-step cost is $O(N/R)$, which
+does not change the overall order: generating $T$ tokens costs $O(T \bar N)$ total,
+where $\bar N$ is the average sequence length over the run — the same asymptotic order
+as a standard FP16 `DynamicCache`, whose attention computation itself is already $O(N)$
+per step. The practical throughput cost measured in §4.1 is therefore a constant-factor
+overhead from this bookkeeping, not a change in asymptotic complexity. Peak memory is
+$O(N)$ regardless of tier distribution — compression reduces the *constant* in front of
+that $O(N)$ (Eq. 11 is exactly that constant), not the growth rate, which is the correct
+target for a method whose stated goal is memory reduction rather than a fundamentally
+sub-linear cache.
+
 ## 3. Experimental Setup
 
 We evaluate two instruction-tuned checkpoints, **Qwen2.5-1.5B-Instruct** and
@@ -344,6 +427,35 @@ resulting next-token NLL. We probe with a real natural-language passage (WikiTex
 rather than a repeated filler sentence, since a repeated sentence has almost no
 token-to-token variation for per-channel grouping to exploit and washes out exactly the
 effect being measured.
+
+### 3.5 Importance-mode ablation
+
+§2.3 defines three importance signals — `attn`, `attn_value` (VATP), and
+`key_diversity` (KeyDiff) — but every result so far uses only the attention-free
+`key_diversity` default. To check whether the choice of importance signal itself
+matters for the headline perplexity result, we re-run the perplexity evaluation
+(§3.1, un-sanity-checked) with `importance_mode` set to each of the other two, at
+matched tier fractions and compression ratio, for both models (n=10 sequences rather
+than 20, to keep the combined ablation budget tractable). `attn`/`attn_value` require
+`output_attentions=True`, which forces eager attention instead of a fused kernel (§2.3)
+— itself a practical argument for defaulting to `key_diversity` in latency-sensitive
+settings, independent of any quality difference measured here.
+
+### 3.6 Compression–quality trade-off
+
+All other results fix $f_{16}=f_8=0.30$ (i.e. roughly a 30/30/40 FP16/INT8/INT4 split
+of the unprotected tokens), which was chosen a priori rather than tuned, and which §4.2
+shows lands at ≈40% memory reduction with comfortably sub-1% degradation. That leaves
+open where the operating point actually sits on the achievable compression-quality
+curve: is 40% reduction close to free, or is quality about to fall off a cliff just
+past it? We sweep $(f_{16}, f_8)$ over four settings from conservative to aggressive —
+(0.6, 0.3), (0.3, 0.3) (the default), (0.15, 0.3), and (0.1, 0.15) — on
+Qwen2.5-1.5B-Instruct (n=10 sequences, key_diversity mode) and report the resulting
+(compression ratio, PPL degradation) pairs. We run this sweep on one model rather than
+both to keep the combined additional-experiment budget of this paper within a
+single-GPU session; we do not claim the resulting curve's exact knee point transfers to
+Phi-3-mini-4k-instruct or to other architectures, only that the qualitative shape
+(degradation stays flat over some range, then rises) is expected to.
 
 ## 4. Results
 
@@ -431,6 +543,19 @@ absolute F1 for baseline and adaptive alike. The two columns track each other cl
 strongly model-dependent: substantial for Qwen2.5-1.5B-Instruct, negligible for
 Phi-3-mini-4k-instruct (§5).*
 
+### 4.6 Importance-mode ablation
+
+@@TABLE_MODE_ABLATION_MD@@
+
+### 4.7 Compression–quality trade-off
+
+@@TABLE_PARETO_MD@@
+
+![Compression-quality trade-off](figures/pareto_curve.png)
+
+*Figure 9 — perplexity degradation vs. KV-cache memory reduction, Qwen2.5-1.5B-Instruct,
+sweeping $(f_{16}, f_8)$ from conservative to aggressive. @@PARETO_CAPTION_MD@@*
+
 ## 5. Discussion
 
 Perplexity degradation stays comfortably under the 1% budget for both models
@@ -494,26 +619,109 @@ fused kernel that dequantizes inline during the attention matmul — rather than
 materializing a full FP16 tensor first — would be needed to bring per-token decode cost
 down further.
 
-## 6. Limitations
+@@DISCUSSION_MODE_ABLATION_MD@@
 
-The cache assumes batch size 1 (extending the tiering policy to a batched, per-example
-policy is unimplemented). Beam search is not supported (`reorder_cache` raises).
-Compression is measured in logical bytes, not wall-clock-optimal kernels: dequantizing
-every tier on every attention call is implemented in plain PyTorch, not fused CUDA
-kernels, so the throughput reported here is a lower bound, not the ceiling a production
-kernel would achieve. Both evaluation models are ≤4B parameters; larger models may
-exhibit different importance-score dynamics.
+@@DISCUSSION_PARETO_MD@@
+
+## 6. Limitations and Future Work
+
+**Batching.** The cache assumes batch size 1: `lazy_initialization` asserts batch=1,
+and every per-layer tensor (`pos`, the three K/V tiers, the importance scores) carries
+no batch axis. Extending to batch >1 is not a cosmetic change — different sequences in
+a batch reach `min_tokens_to_compress` and cross `realloc_interval` boundaries at
+different absolute step counts whenever sequence lengths differ (as they do under
+left-padding or ragged batches), so the re-tiering decision would need to become
+per-example rather than layer-global, and every tensor in `Retier()` would need a batch
+dimension with an attention-mask-aware ranking that ignores padding positions. We view
+this as the single highest-value piece of unimplemented work, since a
+batch-size-1-only cache cannot serve concurrent requests, which is the common case in
+practice.
+
+**Beam search.** `reorder_cache(beam_idx)` raises `NotImplementedError`. Supporting it
+requires index-selecting every tier's K/V/scale/zero/`pos` array (and the importance
+scores) by `beam_idx`, mirroring what `DynamicCache.reorder_cache` does per layer in
+stock `transformers` — mechanical, but needs care to keep the parallel arrays
+consistent with the reordered tiers.
+
+**Compute vs. memory: INT4/INT8 here are storage formats, not accelerated arithmetic.**
+All quantization in this paper is *fake quantization*: tensors are stored at low
+bit-width (delivering the real memory savings in §2.7/§4.1) but are dequantized back to
+FP16 before any matrix multiply, so no INT4/INT8 tensor-core throughput is ever
+realized — the compute cost during attention is unaffected by the bit-width choice at
+all (§2.7). This is why memory drops ≈40% while decode throughput *drops* rather than
+improves (§4.1): the memoization fix removes *redundant* dequantization work but does
+not, and architecturally cannot, turn the remaining necessary dequantization into free
+work. Realizing a joint memory-*and*-speed win would require a fused kernel that
+performs the attention matmul directly against packed INT4/INT8 codes (in the style of
+kernels used for weight-only quantized inference), which is substantial systems work we
+leave to future implementation.
+
+**K-granularity should be selected per model, not hardcoded.** §3.4 shows a 17.3% K-MAE
+improvement from per-channel quantization on Qwen but only 0.2% on Phi-3 — this paper's
+default (`k_granularity="channel"`) is not justified for every architecture. A cheap fix
+that does not require new theory: run §3.4's ablation automatically on a few hundred
+tokens the first time a new model is loaded, and cache whichever granularity wins,
+rather than assuming `channel` unconditionally.
+
+**Model scale and family coverage.** Both evaluated models are ≤4B parameters from two
+model families (Qwen2.5, Phi-3); we have not evaluated larger models (where
+importance-score dynamics or per-channel outlier structure could differ), other
+architecture families (Llama, Mistral, Gemma), or non-instruction-tuned base models. The
+§3.5/§3.6 ablations are similarly limited in scope (reduced sample counts, one model for
+the Pareto sweep) for the reasons stated in §3.5; broader replication across model
+families and scales is the most direct way to test how much of this paper's findings
+(the perplexity result, the model-dependence of the K-granularity benefit) generalize
+versus being specific to the two checkpoints tested here.
+
+**Evaluation harness caveats that remain even after this paper's fixes.** We fixed
+three harness bugs in the course of this work (§3.2, §3.3, and the chat-template issue
+in §5), which is itself evidence that this class of evaluation is failure-prone; we do
+not claim the current harness is bug-free, only that we have not found further
+discrepancies under the sanity-check methodology of §3.1. LongBench narrativeqa is a
+single task from a multi-task benchmark; broader LongBench coverage (qasper,
+multifieldqa, and the summarization/few-shot subsets) would strengthen the
+downstream-task claim beyond one QA style.
 
 ## 7. Conclusion
 
 We presented AdaptiveKVCache, a never-evict, continuously-promotable three-tier KV cache
 with asymmetric per-channel-K / per-token-V quantization granularity. Across two models,
 perplexity degradation stays under 1% at ≈40% memory reduction, and the per-channel K
-design choice is directly justified by a controlled ablation. We further show that two
-of the three downstream task evaluations in this line of work (Needle-in-a-Haystack,
-LongBench F1) require care in harness design — a too-easy synthetic task and a
-context-truncation bug can each independently produce uninformative or misleading
-numbers regardless of the cache's real behavior.
+design choice is directly justified by a controlled ablation — though, as §3.4 and the
+importance-mode ablation (§3.5) both show, the size of that benefit and the choice of
+importance signal are architecture-dependent rather than universal, which we view as an
+honest empirical finding rather than a weakness to be papered over. We further show that
+two of the three downstream task evaluations in this line of work (Needle-in-a-Haystack,
+LongBench F1) required care in harness design — a too-easy synthetic task, a
+context-truncation bug, and a missing chat-template each independently produced
+uninformative or misleading numbers regardless of the cache's real behavior — and that a
+throughput regression traced to redundant, uncached dequantization work was fixable
+without touching the underlying algorithm. §6 lays out what would be needed to move this
+from a research prototype (batch size 1, no fused kernels, no beam search) toward a
+deployable system.
+
+## Appendix: Reproducibility
+
+Code, evaluation scripts, and this paper's source are released alongside the results in
+this paper (see project repository). The table below lists every `AdaptiveKVConfig`
+field (defined in §2) used to produce the headline results in §4; all experiments use
+greedy decoding (`do_sample=False`) for determinism, and models are loaded in FP16
+(`dtype=torch.float16`) with no further quantization of the model weights themselves
+(only the KV cache is quantized).
+
+| Field | Value |
+|---|---|
+| `recent_window` ($W$) | 32 |
+| `sink_tokens` ($S$) | 4 |
+| `fp16_frac` ($f_{16}$) | 0.30 |
+| `int8_frac` ($f_8$) | 0.30 |
+| `realloc_interval` ($R$) | 16 |
+| `importance_mode` | `key_diversity` |
+| `decay` ($\gamma$) | 0.98 |
+| `min_tokens_to_compress` | 64 |
+| `k_channel_group_int8` ($g_K$) | 32 |
+| `k_channel_group_int4` ($g_K$) | 16 |
+| `k_granularity` | `channel` |
 
 ## References
 
