@@ -1,0 +1,12 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights:   0%|          | 1/338 [00:01<09:22,  1.67s/it]Loading weights:  19%|█▉        | 64/338 [00:01<00:05, 49.98it/s]Loading weights:  29%|██▉       | 99/338 [00:02<00:04, 58.48it/s]Loading weights:  36%|███▌      | 122/338 [00:02<00:03, 63.12it/s]Loading weights:  41%|████      | 139/338 [00:02<00:03, 60.53it/s]Loading weights:  45%|████▍     | 152/338 [00:03<00:03, 61.75it/s]Loading weights:  48%|████▊     | 163/338 [00:03<00:02, 58.80it/s]Loading weights:  51%|█████     | 172/338 [00:03<00:02, 61.92it/s]Loading weights:  54%|█████▍    | 183/338 [00:03<00:02, 59.04it/s]Loading weights:  58%|█████▊    | 196/338 [00:03<00:02, 63.61it/s]Loading weights:  62%|██████▏   | 208/338 [00:03<00:01, 69.51it/s]Loading weights:  65%|██████▍   | 219/338 [00:04<00:01, 73.98it/s]Loading weights:  68%|██████▊   | 231/338 [00:04<00:01, 77.96it/s]Loading weights:  72%|███████▏  | 243/338 [00:04<00:01, 75.76it/s]Loading weights:  75%|███████▌  | 255/338 [00:04<00:01, 75.17it/s]Loading weights:  78%|███████▊  | 263/338 [00:04<00:01, 70.45it/s]Loading weights:  80%|████████  | 271/338 [00:04<00:00, 70.74it/s]Loading weights:  83%|████████▎ | 279/338 [00:04<00:00, 71.03it/s]Loading weights:  85%|████████▍ | 287/338 [00:04<00:00, 67.39it/s]Loading weights:  87%|████████▋ | 294/338 [00:05<00:00, 60.27it/s]Loading weights:  90%|████████▉ | 303/338 [00:05<00:00, 65.74it/s]Loading weights:  93%|█████████▎| 315/338 [00:05<00:00, 62.99it/s]Loading weights:  97%|█████████▋| 327/338 [00:05<00:00, 63.76it/s]Loading weights: 100%|██████████| 338/338 [00:05<00:00, 59.80it/s]
+Model loaded on device: cuda:0
+prompt_len |  baseline MB |  adaptive MB | reduction | baseline tok/s | adaptive tok/s
+       512 |         18.4 |         11.3 |     38.5% |          40.16 |          21.91
+      2048 |         62.4 |         37.3 |     40.3% |          43.05 |          22.07
+      8192 |        118.4 |         70.3 |     40.6% |          39.17 |          21.47
+
+Saved results to:
+  results/Qwen_Qwen2.5-1.5B-Instruct_memthroughput_20260905T142921Z.json
+  results/Qwen_Qwen2.5-1.5B-Instruct_memthroughput_20260905T142921Z.csv

@@ -101,6 +101,17 @@ class AdaptiveKVLayer(CacheLayerMixin):
         self._global_len = 0
         self._tokens_since_realloc = 0
 
+        # Memoized dequantization of the INT8/INT4 tiers. These tensors only
+        # actually change inside `_retier()`; every other `update()` call
+        # (i.e. every decode step between re-tiering passes) only appends new
+        # FP16 tokens, so redoing the INT8/INT4 dequant math from scratch on
+        # every single step -- as this cache used to -- is pure waste: it
+        # turns generation into O(N) dequant work per token instead of O(1)
+        # between re-tiers. Invalidated (`None`) exactly when `_retier()`
+        # rewrites the underlying quantized bytes.
+        self._int8_dequant_cache = None
+        self._int4_dequant_cache = None
+
     # ------------------------------------------------------------------ #
     # CacheLayerMixin required interface
     # ------------------------------------------------------------------ #
@@ -183,28 +194,38 @@ class AdaptiveKVLayer(CacheLayerMixin):
         return 0 if self._int4_k is None else self._int4_k.shape[1]
 
     def _int8_kv_dequant(self):
+        if self._int8_dequant_cache is not None:
+            return self._int8_dequant_cache
         if self._n_int8() == 0:
             empty = torch.empty(self.num_heads, 0, self.head_dim, dtype=self.dtype, device=self.device)
-            return empty, empty
-        if self.cfg.k_granularity == "channel":
-            k = dequantize_int8_channel(self._int8_k, self._int8_k_scale, self._int8_k_zero,
-                                         self.cfg.k_channel_group_int8, self.dtype)
+            result = (empty, empty)
         else:
-            k = dequantize_int8(self._int8_k, self._int8_k_scale, self._int8_k_zero, self.dtype)
-        v = dequantize_int8(self._int8_v, self._int8_v_scale, self._int8_v_zero, self.dtype)
-        return k, v
+            if self.cfg.k_granularity == "channel":
+                k = dequantize_int8_channel(self._int8_k, self._int8_k_scale, self._int8_k_zero,
+                                             self.cfg.k_channel_group_int8, self.dtype)
+            else:
+                k = dequantize_int8(self._int8_k, self._int8_k_scale, self._int8_k_zero, self.dtype)
+            v = dequantize_int8(self._int8_v, self._int8_v_scale, self._int8_v_zero, self.dtype)
+            result = (k, v)
+        self._int8_dequant_cache = result
+        return result
 
     def _int4_kv_dequant(self):
+        if self._int4_dequant_cache is not None:
+            return self._int4_dequant_cache
         if self._int4_k is None or self._int4_k.shape[1] == 0:
             empty = torch.empty(self.num_heads, 0, self.head_dim, dtype=self.dtype, device=self.device)
-            return empty, empty
-        if self.cfg.k_granularity == "channel":
-            k = dequantize_int4_channel(self._int4_k, self._int4_k_scale, self._int4_k_zero,
-                                         self.cfg.k_channel_group_int4, self.head_dim, self.dtype)
+            result = (empty, empty)
         else:
-            k = dequantize_int4(self._int4_k, self._int4_k_scale, self._int4_k_zero, self.head_dim, self.dtype)
-        v = dequantize_int4(self._int4_v, self._int4_v_scale, self._int4_v_zero, self.head_dim, self.dtype)
-        return k, v
+            if self.cfg.k_granularity == "channel":
+                k = dequantize_int4_channel(self._int4_k, self._int4_k_scale, self._int4_k_zero,
+                                             self.cfg.k_channel_group_int4, self.head_dim, self.dtype)
+            else:
+                k = dequantize_int4(self._int4_k, self._int4_k_scale, self._int4_k_zero, self.head_dim, self.dtype)
+            v = dequantize_int4(self._int4_v, self._int4_v_scale, self._int4_v_zero, self.head_dim, self.dtype)
+            result = (k, v)
+        self._int4_dequant_cache = result
+        return result
 
     def _full_keys_dequant(self):
         k8, _ = self._int8_kv_dequant()
@@ -325,6 +346,13 @@ class AdaptiveKVLayer(CacheLayerMixin):
             int8_order,
             int4_order,
         ]))
+
+        # The INT8/INT4 tiers were just rewritten above -- invalidate the
+        # memoized dequantization (see `__init__`) so the next `_int8_kv_dequant`/
+        # `_int4_kv_dequant` call recomputes from the fresh bytes instead of
+        # returning last step's stale cache.
+        self._int8_dequant_cache = None
+        self._int4_dequant_cache = None
 
     def _rebuild_tier_v(self, tier_id, tier, old_tier, old_local, positions, full_v,
                          old_v, old_v_scale, old_v_zero, quantize_fn):

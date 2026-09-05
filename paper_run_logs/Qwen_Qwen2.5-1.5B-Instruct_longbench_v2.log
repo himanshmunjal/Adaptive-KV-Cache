@@ -1,0 +1,43 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights:   0%|          | 1/338 [00:01<08:07,  1.45s/it]Loading weights:  15%|█▌        | 52/338 [00:01<00:07, 40.49it/s]Loading weights:  19%|█▉        | 65/338 [00:01<00:05, 47.58it/s]Loading weights:  22%|██▏       | 76/338 [00:02<00:05, 48.04it/s]Loading weights:  26%|██▌       | 88/338 [00:02<00:04, 50.96it/s]Loading weights:  30%|██▉       | 100/338 [00:02<00:04, 57.33it/s]Loading weights:  33%|███▎      | 113/338 [00:02<00:03, 57.27it/s]Loading weights:  36%|███▋      | 123/338 [00:02<00:03, 61.25it/s]Loading weights:  40%|███▉      | 135/338 [00:02<00:03, 63.11it/s]Loading weights:  43%|████▎     | 147/338 [00:03<00:03, 58.95it/s]Loading weights:  47%|████▋     | 159/338 [00:03<00:03, 49.13it/s]Loading weights:  51%|█████     | 171/338 [00:03<00:02, 58.63it/s]Loading weights:  53%|█████▎    | 179/338 [00:03<00:02, 55.40it/s]Loading weights:  55%|█████▌    | 186/338 [00:03<00:02, 56.83it/s]Loading weights:  58%|█████▊    | 195/338 [00:04<00:02, 61.74it/s]Loading weights:  61%|██████    | 207/338 [00:04<00:01, 69.06it/s]Loading weights:  64%|██████▎   | 215/338 [00:04<00:02, 59.78it/s]Loading weights:  66%|██████▌   | 222/338 [00:04<00:02, 52.43it/s]Loading weights:  69%|██████▊   | 232/338 [00:04<00:02, 50.24it/s]Loading weights:  72%|███████▏  | 243/338 [00:04<00:01, 57.98it/s]Loading weights:  74%|███████▍  | 250/338 [00:05<00:01, 50.06it/s]Loading weights:  76%|███████▌  | 257/338 [00:05<00:01, 45.20it/s]Loading weights:  80%|███████▉  | 269/338 [00:05<00:01, 55.63it/s]Loading weights:  83%|████████▎ | 280/338 [00:05<00:00, 60.49it/s]Loading weights:  86%|████████▋ | 292/338 [00:05<00:00, 61.95it/s]Loading weights:  90%|████████▉ | 303/338 [00:05<00:00, 70.54it/s]Loading weights:  93%|█████████▎| 315/338 [00:06<00:00, 63.28it/s]Loading weights:  97%|█████████▋| 327/338 [00:06<00:00, 57.09it/s]Loading weights: 100%|██████████| 338/338 [00:06<00:00, 53.20it/s]
+Model loaded on device: cuda:0
+[1/30] base_f1=0.000 adaptive_f1=0.154 compression=0.593
+[2/30] base_f1=0.316 adaptive_f1=0.000 compression=0.592
+[3/30] base_f1=0.400 adaptive_f1=0.400 compression=0.592
+[4/30] base_f1=0.211 adaptive_f1=0.211 compression=0.593
+[5/30] base_f1=0.154 adaptive_f1=0.222 compression=0.592
+[6/30] base_f1=1.000 adaptive_f1=0.500 compression=0.592
+[7/30] base_f1=0.500 adaptive_f1=0.500 compression=0.592
+[8/30] base_f1=0.000 adaptive_f1=0.000 compression=0.592
+[9/30] base_f1=0.500 adaptive_f1=0.000 compression=0.592
+[10/30] base_f1=0.000 adaptive_f1=0.000 compression=0.592
+[11/30] base_f1=0.100 adaptive_f1=0.067 compression=0.593
+[12/30] base_f1=0.000 adaptive_f1=0.000 compression=0.592
+[13/30] base_f1=0.000 adaptive_f1=0.000 compression=0.592
+[14/30] base_f1=0.000 adaptive_f1=0.000 compression=0.592
+[15/30] base_f1=0.000 adaptive_f1=0.000 compression=0.592
+[16/30] base_f1=0.000 adaptive_f1=0.308 compression=0.593
+[17/30] base_f1=0.000 adaptive_f1=0.190 compression=0.593
+[18/30] base_f1=0.190 adaptive_f1=0.194 compression=0.593
+[19/30] base_f1=0.200 adaptive_f1=0.000 compression=0.592
+[20/30] base_f1=0.000 adaptive_f1=0.000 compression=0.592
+[21/30] base_f1=0.000 adaptive_f1=0.000 compression=0.593
+[22/30] base_f1=0.667 adaptive_f1=0.667 compression=0.592
+[23/30] base_f1=0.000 adaptive_f1=0.000 compression=0.592
+[24/30] base_f1=0.000 adaptive_f1=0.000 compression=0.592
+[25/30] base_f1=0.267 adaptive_f1=0.545 compression=0.592
+[26/30] base_f1=0.000 adaptive_f1=0.000 compression=0.592
+[27/30] base_f1=0.348 adaptive_f1=0.129 compression=0.592
+[28/30] base_f1=0.000 adaptive_f1=0.000 compression=0.592
+[29/30] base_f1=0.286 adaptive_f1=0.500 compression=0.592
+[30/30] base_f1=0.333 adaptive_f1=0.333 compression=0.592
+
+=== Summary ===
+Task: narrativeqa  (n=30)
+Baseline F1:  0.1824
+Adaptive F1:  0.1640
+Mean compression ratio: 0.592 (40.8% memory reduction)
+
+Saved results to:
+  results/Qwen_Qwen2.5-1.5B-Instruct_longbench_narrativeqa_20260905T143409Z.json
+  results/Qwen_Qwen2.5-1.5B-Instruct_longbench_narrativeqa_20260905T143409Z.csv

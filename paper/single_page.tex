@@ -61,19 +61,22 @@ Phi-3-mini & 0.02\% & 39.4\% & +0.2\% \\
 \end{tabular}
 \end{center}
 
-NIAH (distractor-hardened, 3 decoys/cell) and LongBench narrativeqa F1
-(context-truncation fixed to preserve the question) show baseline and adaptive tracking
-each other exactly, model for model: NIAH mean accuracy 0.62/0.62 (Qwen) and 0.02/0.02
-(Phi-3); LongBench F1 0.080/0.094 (Qwen) and 0.078/0.077 (Phi-3) (baseline/adaptive). No
-relative degradation on either task -- though Phi-3's 0.02 NIAH accuracy is a floor
-effect (task too hard for this model at this difficulty), not evidence of strong absolute
-retrieval; see full report.
+NIAH (distractor-hardened, chat-templated prompts) and LongBench narrativeqa F1 (context
+truncation and chat-template both fixed) show baseline and adaptive tracking each other
+closely: NIAH at 1000/4000/8000 tokens is 0.80/0.60/0.73 vs.\ 0.80/0.60/0.67 (Qwen,
+base/adapt.) and an exact 0.80/0.27/0.00 for both on Phi-3, whose last two cells reflect
+its native 4096-token window being exceeded, not compression; LongBench F1 is
+0.182/0.164 (Qwen) and 0.183/0.189 (Phi-3), base/adapt. No relative degradation on either
+task; see full report.
 
 \section{Takeaway}
 Continuous bidirectional tiering (vs.\ hard eviction) plus K/V-asymmetric quantization
 granularity keeps LM-quality degradation (perplexity) comfortably under 1\% at
-$\sim$40\% memory reduction; downstream task metrics (NIAH, LongBench) required fixing
-two independent evaluation-harness bugs (a ceiling effect and a question-truncation
-bug) before they could be trusted as evidence either way.
+$\sim$40\% memory reduction. Getting trustworthy downstream-task numbers took three
+independent harness fixes (a ceiling effect, a question-truncation bug, and a missing
+chat-template) -- after which adaptive tracks baseline closely on both tasks. A dequant
+memoization fix (only recompute INT8/INT4 tiers when re-tiering actually runs) nearly
+doubled adaptive decode throughput, narrowing the speed gap to baseline from
+$\sim$3.6x to $\sim$2x.
 
 \end{document}

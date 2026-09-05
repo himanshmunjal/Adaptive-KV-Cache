@@ -28,12 +28,19 @@ def generate_with_adaptive_cache(
     temperature: float = 1.0,
     return_stats: bool = False,
     max_length: int | None = None,
+    add_special_tokens: bool = True,
 ):
+    """`add_special_tokens` should be set False when `prompt` is already a
+    fully chat-templated string (e.g. from `tokenizer.apply_chat_template(...,
+    tokenize=False)`), since that string already contains whatever special
+    tokens the chat format needs -- tokenizing it again with
+    `add_special_tokens=True` would insert a second, spurious BOS/marker.
+    """
     cache_config = cache_config or AdaptiveKVConfig()
     needs_attn = cache_config.importance_mode != "key_diversity"
     device = next(model.parameters()).device
 
-    inputs = tokenizer(prompt, return_tensors="pt")
+    inputs = tokenizer(prompt, return_tensors="pt", add_special_tokens=add_special_tokens)
     if max_length is not None and inputs["input_ids"].shape[1] > max_length:
         inputs["input_ids"] = inputs["input_ids"][:, :max_length]
         if "attention_mask" in inputs:

@@ -82,10 +82,23 @@ def build_haystack(tok, n_tokens: int, depth: float, secret: int,
     return haystack + question, needle
 
 
+def render_chat_prompt(tok, user_content: str) -> str:
+    """Wrap `user_content` in the model's own chat template. Both models
+    evaluated here are instruction-tuned; feeding them a raw-text continuation
+    prompt instead of their expected chat format (as this script used to do)
+    makes them liable to just continue the haystack text rather than answer
+    the question, which depresses accuracy for reasons unrelated to
+    compression. The returned string already contains every special token the
+    template needs, so callers must tokenize it with `add_special_tokens=False`.
+    """
+    messages = [{"role": "user", "content": user_content}]
+    return tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+
+
 @torch.no_grad()
 def generate_baseline(model, tok, prompt: str, max_new_tokens: int = 16) -> str:
     from transformers import DynamicCache
-    inputs = tok(prompt, return_tensors="pt").to(model.device)
+    inputs = tok(prompt, return_tensors="pt", add_special_tokens=False).to(model.device)
     out_ids = model.generate(**inputs, past_key_values=DynamicCache(), max_new_tokens=max_new_tokens,
                               do_sample=False, pad_token_id=tok.eos_token_id)
     return tok.decode(out_ids[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True)
@@ -124,10 +137,12 @@ def main():
             base_hits, adapt_hits = 0, 0
             for t in range(args.trials_per_cell):
                 secret = random.randint(10000, 99999)
-                prompt, needle = build_haystack(tok, L, d, secret, n_distractors=args.n_distractors)
+                raw_prompt, needle = build_haystack(tok, L, d, secret, n_distractors=args.n_distractors)
+                prompt = render_chat_prompt(tok, raw_prompt)
                 base_ans = generate_baseline(model, tok, prompt)
                 _, stats = generate_with_adaptive_cache(
                     model, tok, prompt, max_new_tokens=16, cache_config=cfg, return_stats=True,
+                    add_special_tokens=False,
                 )
                 adapt_ans = stats["generated_text"]
                 base_hits += str(secret) in base_ans

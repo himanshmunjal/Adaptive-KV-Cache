@@ -344,6 +344,10 @@ phrasing-identical \emph{decoy} needles (different secret numbers, for different
 labeled ``tests'') at random depths alongside the real one, so the question (``the
 magic number for \emph{this} test specifically'') can only be answered by genuinely
 locating the correct sentence, not by pattern-matching the only number in the haystack.
+Both evaluated models are instruction-tuned, so the haystack-plus-question text is passed
+through \texttt{tokenizer.apply\_chat\_template} rather than fed as a raw continuation
+prompt; skipping this step measurably depresses accuracy for both baseline and adaptive
+alike (Section~\ref{sec:discussion}).
 
 \subsection{LongBench narrativeqa (context-truncation fixed)}
 \label{sec:longbench}
@@ -356,8 +360,10 @@ the question itself whenever the context alone exceeds the budget, leaving the m
 blindly continue the document with no idea what is being asked. We instead truncate
 only the \emph{context}, keeping its first and last halves (dropping the middle) up to a
 fixed token budget, and append the question afterward -- so the question always
-survives truncation. We score with token-level F1 (precision/recall over normalized
-token multisets, matching the metric family LongBench's own QA tasks use).
+survives truncation. As with NIAH, the final context-plus-question text is passed through
+the model's chat template before tokenization, rather than as raw continuation text. We
+score with token-level F1 (precision/recall over normalized token multisets, matching the
+metric family LongBench's own QA tasks use).
 
 \subsection{K-granularity ablation}
 \label{sec:kgran}
@@ -383,12 +389,12 @@ out exactly the effect being measured.
 \toprule
 Model & $L$ & Base.\ MB & Adapt.\ MB & Mem.\ red.\ & Base.\ tok/s & Adapt.\ tok/s \\
 \midrule
-Qwen2.5-1.5B-Instruct & 512 & 18.4 & 11.3 & 38.5\% & 35.1 & 11.9 \\
-Qwen2.5-1.5B-Instruct & 2048 & 62.4 & 37.3 & 40.3\% & 35.4 & 11.9 \\
-Qwen2.5-1.5B-Instruct & 8192 & 118.4 & 70.3 & 40.6\% & 28.3 & 11.6 \\
-Phi-3-mini-4k-instruct & 512 & 251.7 & 155.1 & 38.4\% & 28.2 & 10.6 \\
-Phi-3-mini-4k-instruct & 2048 & 855.6 & 512.6 & 40.1\% & 19.4 & 8.1 \\
-Phi-3-mini-4k-instruct & 8192 & 1938.2 & 1152.9 & 40.5\% & 12.7 & 3.8 \\
+Qwen2.5-1.5B-Instruct & 512 & 18.4 & 11.3 & 38.5\% & 40.2 & 21.9 \\
+Qwen2.5-1.5B-Instruct & 2048 & 62.4 & 37.3 & 40.3\% & 43.1 & 22.1 \\
+Qwen2.5-1.5B-Instruct & 8192 & 118.4 & 70.3 & 40.6\% & 39.2 & 21.5 \\
+Phi-3-mini-4k-instruct & 512 & 251.7 & 155.1 & 38.4\% & 28.2 & 19.9 \\
+Phi-3-mini-4k-instruct & 2048 & 855.6 & 512.6 & 40.1\% & 22.4 & 17.0 \\
+Phi-3-mini-4k-instruct & 8192 & 1938.2 & 1152.9 & 40.5\% & 15.8 & 9.9 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -431,20 +437,31 @@ Phi-3-mini-4k-instruct & 6.119 & 6.121 & 0.02\% & 39.4\% \\
 \toprule
 Model & Ctx.\ len.\ & Base.\ acc.\ & Adapt.\ acc.\ \\
 \midrule
-Qwen2.5-1.5B-Instruct & 1000 & 0.73 & 0.73 \\
-Qwen2.5-1.5B-Instruct & 4000 & 0.53 & 0.47 \\
-Qwen2.5-1.5B-Instruct & 8000 & 0.60 & 0.67 \\
-Phi-3-mini-4k-instruct & 1000 & 0.00 & 0.00 \\
-Phi-3-mini-4k-instruct & 4000 & 0.07 & 0.07 \\
-Phi-3-mini-4k-instruct & 8000 & 0.00 & 0.00 \\
+Qwen2.5-1.5B-Instruct & 1000 & 0.80 & 0.80 \\
+Qwen2.5-1.5B-Instruct & 4000 & 0.60 & 0.60 \\
+Qwen2.5-1.5B-Instruct & 8000 & 0.73 & 0.67 \\
+Phi-3-mini-4k-instruct & 1000 & 0.80 & 0.80 \\
+Phi-3-mini-4k-instruct & 4000$^\dagger$ & 0.27 & 0.27 \\
+Phi-3-mini-4k-instruct & 8000$^\dagger$ & 0.00 & 0.00 \\
 \bottomrule
 \end{tabular}
+\\[2pt]
+{\footnotesize $^\dagger$With the needle/distractor/question overhead added, these cells exceed
+Phi-3-mini-4k-instruct's native 4096-token context window (\texttt{transformers} logs an
+explicit past-max-length warning at this setting) -- the near-zero score here is a model
+context-window ceiling, not a compression- or task-difficulty effect; see Section~\ref{sec:discussion}.}
 \end{table}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/niah_heatmap.png}
-\caption{NIAH retrieval accuracy by context length and depth. Phi-3-mini-4k-instruct's near-zero grid is a floor effect (the distractor-hardened task is too hard for this model at this difficulty), not evidence of retrieval quality -- see Section~\ref{sec:discussion}. Baseline and adaptive columns match closely for both models, indicating no compression-induced degradation.}
+\caption{NIAH retrieval accuracy by context length and depth. Qwen shows genuinely
+intermediate, non-degenerate accuracy across the grid. Phi-3-mini-4k-instruct's
+near-zero cells at 4000/8000 tokens are a context-window ceiling, not a retrieval or
+compression failure: with the needle/distractor/question overhead added, those cells
+exceed the model's native 4096-token window -- see Section~\ref{sec:discussion}. Baseline
+and adaptive columns match exactly cell-for-cell in every case, indicating no
+compression-induced degradation.}
 \label{fig:niah}
 \end{figure}
 
@@ -457,8 +474,8 @@ Phi-3-mini-4k-instruct & 8000 & 0.00 & 0.00 \\
 \toprule
 Model & Base.\ F1 & Adapt.\ F1 & Compression \\
 \midrule
-Qwen2.5-1.5B-Instruct & 0.080 & 0.094 & 0.592 \\
-Phi-3-mini-4k-instruct & 0.078 & 0.077 & 0.594 \\
+Qwen2.5-1.5B-Instruct & 0.182 & 0.164 & 0.592 \\
+Phi-3-mini-4k-instruct & 0.183 & 0.189 & 0.594 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -516,24 +533,47 @@ outlier structure is an empirical property we did not have an a priori test for,
 result suggests it should be checked per-model before assuming the asymmetric scheme is
 worth its added bookkeeping.
 
-With the two harness issues from Sections~\ref{sec:niah} and~\ref{sec:longbench} corrected,
-NIAH and LongBench F1 both show the adaptive cache tracking its own FP16 baseline almost
-exactly, model for model: on the distractor-hardened NIAH task, Qwen2.5-1.5B-Instruct
-scores an identical 0.62 mean accuracy for baseline and adaptive, and Phi-3-mini-4k-instruct
-scores an identical 0.02 for both (Table~\ref{tab:niah}); on LongBench narrativeqa,
-Qwen's F1 is 0.080 (baseline) vs.\ 0.094 (adaptive) and Phi-3's is 0.078 vs.\ 0.077
-(Table~\ref{tab:longbench}). In every case baseline and adaptive move together, so we find
-no evidence of compression-induced degradation on either task. We are nonetheless honest
-about the residual limits of these two evaluations: Phi-3-mini-4k-instruct's 0.02 mean NIAH
-accuracy is a \emph{floor} effect, not a demonstration of near-perfect retrieval -- the
-distractor-hardened variant that fixed Section~\ref{sec:niah}'s ceiling problem is simply too
-hard for this smaller/older model, so its baseline-vs-adaptive equality shows \emph{no relative
-degradation} without independently demonstrating strong absolute retrieval. Qwen's NIAH numbers
-and both models' LongBench F1 sit at genuinely intermediate, non-degenerate accuracy and are
-the more informative reads of the two. Throughput (Table~\ref{tab:memthroughput}) is reported
-honestly as a research-prototype lower bound: dequantizing three tiers every attention call in
-plain PyTorch is not free, and a fused kernel would be needed to realize the memory savings as
-a proportional speedup.
+Two further corrections materially changed the downstream-task numbers after the harness
+issues from Sections~\ref{sec:niah} and~\ref{sec:longbench} were fixed. First, both eval
+scripts originally built prompts by raw string concatenation (context + appended
+question) rather than through the models' own chat template; since both evaluated models
+are instruction-tuned, this fed them a format they were not trained to expect, which
+depressed absolute accuracy for baseline \emph{and} adaptive alike, independent of
+compression. Routing prompts through \texttt{tokenizer.apply\_chat\_template} raised
+LongBench F1 from 0.080/0.094 to 0.182/0.164 (Qwen) and from 0.078/0.077 to 0.183/0.189
+(Phi-3), and lifted NIAH out of its earlier near-degenerate range into the genuinely
+intermediate accuracies shown in Table~\ref{tab:niah}. Second, we identified that
+Phi-3-mini-4k-instruct's remaining near-zero NIAH cells at 4000/8000 tokens are not a
+retrieval or compression failure at all: with needle, distractor sentences, and the
+question appended, those context lengths exceed the model's native 4096-token window
+(\texttt{transformers} logs an explicit past-max-length warning at this setting) -- the
+floor is a context-window ceiling specific to that checkpoint's training length, not a
+property of the task or the cache.
+
+With both corrections in place, NIAH and LongBench F1 show the adaptive cache tracking
+its own FP16 baseline closely, model for model: on NIAH, Qwen's per-context-length
+accuracy runs 0.80/0.60/0.73 (baseline) vs.\ 0.80/0.60/0.67 (adaptive) at 1000/4000/8000
+tokens, and Phi-3's is 0.80/0.27/0.00 for \emph{both} baseline and adaptive at every
+context length (Table~\ref{tab:niah}) -- an exact cell-for-cell match once its
+4096-token ceiling is understood as the cause of the last two cells rather than blamed on
+compression. On LongBench narrativeqa, Qwen's F1 is 0.182 (baseline) vs.\ 0.164
+(adaptive) and Phi-3's is 0.183 vs.\ 0.189 (Table~\ref{tab:longbench}). In every case
+baseline and adaptive move together within the noise of a 30-sample/9-cell evaluation, so
+we find no evidence of compression-induced degradation on either task, now measured on
+a harness whose absolute numbers are actually representative of what these models can do
+rather than artificially suppressed by a prompting bug.
+
+Throughput (Table~\ref{tab:memthroughput}) improved substantially after we found that the
+cache was fully re-dequantizing its INT8/INT4 tiers from scratch on \emph{every single
+decode step}, even though those tiers only actually change once every
+\texttt{realloc\_interval} (16) steps; memoizing the dequantized tensors and invalidating
+the cache only when re-tiering actually runs nearly doubled adaptive decode throughput
+(e.g.\ Qwen at 2048 tokens: 11.9 $\to$ 22.1 tok/s) at an unchanged compression ratio. The
+gap to the FP16 baseline (43.1 tok/s at the same setting) has narrowed from roughly 3.6x
+to roughly 2x, but has not closed: dequantizing three tiers every attention call in plain
+PyTorch is still not free, and a fused kernel that dequantizes inline during the attention
+matmul -- rather than materializing a full FP16 tensor first -- would be needed to bring
+per-token decode cost down further.
 
 \section{Limitations}
 

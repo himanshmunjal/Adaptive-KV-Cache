@@ -15,7 +15,7 @@ class _DummyTokenizer:
         def to(self, device):
             return {k: v.to(device) for k, v in self.items()}
 
-    def __call__(self, text, return_tensors="pt"):
+    def __call__(self, text, return_tensors="pt", **kwargs):
         n = len(text.split())
         ids = [3 + (i % 250) for i in range(n)]
         return self._Batch(input_ids=torch.tensor([ids], dtype=torch.long))

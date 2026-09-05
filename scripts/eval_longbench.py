@@ -119,10 +119,24 @@ def truncate_middle(tok, text: str, max_tokens: int) -> str:
     return tok.decode(ids, skip_special_tokens=True)
 
 
+def render_chat_prompt(tok, user_content: str) -> str:
+    """Wrap `user_content` in the model's own chat template. Both models
+    evaluated here are instruction-tuned; feeding them a raw-text continuation
+    prompt instead of their expected chat format (as this script used to do)
+    makes them liable to just continue the document text rather than answer
+    the question, which depresses F1 for both baseline and adaptive alike for
+    reasons unrelated to compression. The returned string already contains
+    every special token the template needs, so callers must tokenize it with
+    `add_special_tokens=False`.
+    """
+    messages = [{"role": "user", "content": user_content}]
+    return tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+
+
 @torch.no_grad()
 def generate_baseline(model, tok, prompt: str, max_new_tokens: int) -> str:
     from transformers import DynamicCache
-    inputs = tok(prompt, return_tensors="pt").to(model.device)
+    inputs = tok(prompt, return_tensors="pt", add_special_tokens=False).to(model.device)
     cache = DynamicCache()
     out_ids = model.generate(**inputs, past_key_values=cache, max_new_tokens=max_new_tokens,
                               do_sample=False, pad_token_id=tok.eos_token_id)
@@ -177,13 +191,15 @@ def main():
     for i in range(n):
         ex = ds[i]
         context = truncate_middle(tok, ex["context"], args.max_context_tokens)
-        prompt = context + "\n\nQuestion: " + ex["input"] + "\nAnswer:"
+        user_content = (context + "\n\nQuestion: " + ex["input"] +
+                        "\nAnswer with the shortest possible exact answer, no explanation.")
+        prompt = render_chat_prompt(tok, user_content)
         golds = ex["answers"]
 
         base_out = generate_baseline(model, tok, prompt, args.max_new_tokens)
         _, stats = generate_with_adaptive_cache(
             model, tok, prompt, max_new_tokens=args.max_new_tokens,
-            cache_config=cfg, return_stats=True,
+            cache_config=cfg, return_stats=True, add_special_tokens=False,
         )
         adapt_out = stats["generated_text"]
 
